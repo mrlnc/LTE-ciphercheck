@@ -89,6 +89,12 @@ void mac::stop()
   wait_thread_finish();
 }
 
+void mac::stop_pcap() {
+  dl_harq.stop_pcap();
+  ul_harq.stop_pcap();
+  ra_procedure.stop_pcap();
+}
+
 void mac::start_pcap(srslte::mac_pcap* pcap_)
 {
   pcap = pcap_;

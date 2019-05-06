@@ -101,6 +101,8 @@ public:
   void set_ho_rnti(uint16_t crnti, uint16_t target_pci);
 
   void start_pcap(srslte::mac_pcap* pcap);
+  void stop_pcap();
+
 
   // Timer callback interface
   void timer_expired(uint32_t timer_id); 

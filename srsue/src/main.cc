@@ -103,6 +103,8 @@ void parse_args(all_args_t *args, int argc, char *argv[]) {
      "Radio timing traces filename")
 
     ("gui.enable", bpo::value<bool>(&args->gui.enable)->default_value(false), "Enable GUI plots")
+    ("initial_sec_caps_eia", bpo::value<uint32_t>(&args->initial_sec_caps_eia)->default_value(0), "Initial Security Capabilities")
+    ("initial_sec_caps_eea", bpo::value<uint32_t>(&args->initial_sec_caps_eea)->default_value(0), "Initial Security Capabilities")
 
     ("log.phy_level", bpo::value<string>(&args->log.phy_level), "PHY log level")
     ("log.phy_lib_level", bpo::value<string>(&args->log.phy_lib_level), "PHY lib log level")
@@ -543,47 +545,97 @@ int main(int argc, char *argv[])
   pthread_t input;
   pthread_create(&input, NULL, &input_loop, &args);
 
-  printf("Attaching UE...\n");
-  while (!ue->attach() && running) {
-    sleep(1);
+  printf("Testing with valid config!\n");
+  ue->set_sec_capabilities(0b0111, 0b0111);
+  ue->attach();
+  smc_attach_result_t attach_result = ue->get_attach_result();
+  printf("Result: %s\n", smc_attach_result_text[attach_result]);
+  if (attach_result != SMC_RESULT_ATTACH && attach_result != SMC_RESULT_SMC) {
+    printf("Error! Could not attach with valid config. file:///tmp/ue.pcap file:///tmp/nas.pcap\n");
+    pthread_cancel(input);
+    metricshub.stop();
+    ue->stop();
+    ue->cleanup();
+    cout << "---  exiting  ---" << endl;
+    exit(0);
   }
-  if (running) {
-    if (args.expert.pregenerate_signals) {
-      printf("Pre-generating signals...\n");
-      ue->pregenerate_signals(true);
-      printf("Done pregenerating signals.\n");
-    }
-    if (args.gui.enable) {
-      ue->start_plot();
-    }
-    // Auto-start MBMS service by default
-    if(args.expert.mbms_service > -1){
-      serv = args.expert.mbms_service;
-      port = 4321;
-      mbms_service_start = true;
-    }
-  }
-  int cnt=0;
+
+  ue->deattach();
+
+  /* SEC CAPS:      MSB       LSB
+   *              3 2 1 0 | 3 2 1 0
+   *                EIA   |   EEA
+   */
+
+  uint8_t sec_caps = 0;
+  uint8_t sec_caps_eia = args.initial_sec_caps_eia & 0x0f;
+  uint8_t sec_caps_eea = args.initial_sec_caps_eea & 0x0f;
+  sec_caps = (sec_caps_eia << 4 ) | sec_caps_eea;
+  
+  ue->set_sec_capabilities(sec_caps_eia, sec_caps_eea);
+  attach_result = SMC_RESULT_NULL;
+  uint count = 0;
+
+  char filename[50];
+  sprintf(filename, "/tmp/SMC/ue_EIA_%i_EEA_%i.pcap", sec_caps_eia, sec_caps_eea);
+  char nas_filename[50];
+  sprintf(nas_filename, "/tmp/SMC/nas_EIA_%i_EEA_%i.pcap", sec_caps_eia, sec_caps_eea);
+
   while (running) {
-    //
-    if(mbms_service_start) {
-      if(ue->mbms_service_start(serv, port)){
-        mbms_service_start = false;
+    printf("###############################################################\n");
+    printf("Testing EIA: %i EEA: %i\n", sec_caps_eia, sec_caps_eea);
+    ue->pcap_start(filename, nas_filename, 0);
+
+    printf("Attaching UE...\n");
+    if (running) {
+      ue->attach();
+    }
+    if (running) {
+      usleep(100000);
+    }
+    attach_result = ue->get_attach_result();
+    printf("Result: %s\n", smc_attach_result_text[attach_result]);
+
+    printf("Detaching UE...\n");
+    if (running) {
+      ue->deattach();
+    }
+
+    /* Require either Attach Accept or Attach Reject to finish test case.
+     * ONLY if we test ZUC (0b1000), SMC is enough, because we don't implement ZUC */ 
+    if (attach_result == SMC_RESULT_ATTACH || attach_result == SMC_RESULT_REJECT || ((attach_result == SMC_RESULT_SMC) && (sec_caps_eea & 0b1000 || sec_caps_eia & 0b1000) )){
+      // this run is finished
+      printf("###############################################################\n");
+
+       // prepare next test case
+      sec_caps += 1;
+      sec_caps_eia = (sec_caps >> 4) & 0x0f;
+      sec_caps_eea = sec_caps & 0x0f;
+    } else {
+      count++;
+      if (count >= 10) {
+
+        printf("ERROR! %i trial, no response for EIA %i EEA %i. Consider manual re-evaluation\n", count, sec_caps_eia, sec_caps_eea);
+
+        sec_caps += 1;
+        sec_caps_eia = (sec_caps >> 4) & 0x0f;
+        sec_caps_eea = sec_caps & 0x0f;
+        count = 0;
       }
     }
-    if(show_mbms) {
-      show_mbms = false;
-      ue->print_mbms();
+
+    if (sec_caps != 0) {
+      // filenames for *next* run
+      sprintf(filename, "/tmp/SMC/ue_EIA_%i_EEA_%i.pcap", sec_caps_eia, sec_caps_eea);
+      sprintf(nas_filename, "/tmp/SMC/nas_EIA_%i_EEA_%i.pcap", sec_caps_eia, sec_caps_eea);
+      ue->set_sec_capabilities(sec_caps_eia, sec_caps_eea);
+    } else {
+      // overflow; we're finished :-)
+      running = false;
+      break;
     }
-    if (args.expert.print_buffer_state) {
-      cnt++;
-      if (cnt==10) {
-        cnt=0;
-        ue->print_pool();
-      }
-    }
-    sleep(1);
   }
+
   pthread_cancel(input);
   metricshub.stop();
   ue->stop();

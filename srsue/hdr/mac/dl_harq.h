@@ -136,6 +136,8 @@ public:
 
   void start_pcap(srslte::mac_pcap* pcap_) { pcap = pcap_; }
 
+  void stop_pcap() { pcap = NULL; }
+
   int  get_current_tbs(uint32_t harq_pid, uint32_t tb_idx) { return proc[harq_pid%N].get_current_tbs(tb_idx); }
 
   void set_si_window_start(int si_window_start_) { si_window_start = si_window_start_; }

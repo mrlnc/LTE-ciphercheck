@@ -97,6 +97,9 @@ public:
     pcap = pcap_;
   }
 
+  void stop_pcap() { pcap = NULL; }
+
+
 
   /***************** PHY->MAC interface for UL processes **************************/
   void new_grant_ul(Tgrant grant, Taction *action) {

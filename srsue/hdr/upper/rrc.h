@@ -299,6 +299,8 @@ public:
   bool connection_request(LIBLTE_RRC_CON_REQ_EST_CAUSE_ENUM cause,
                           srslte::byte_buffer_t *dedicatedInfoNAS);
   void set_ue_idenity(LIBLTE_RRC_S_TMSI_STRUCT s_tmsi);
+  void rrc_connection_release();
+
 
   // PHY interface
   void in_sync();
@@ -616,7 +618,6 @@ private:
   bool          con_reconfig_ho(LIBLTE_RRC_CONNECTION_RECONFIGURATION_STRUCT *reconfig);
   bool          ho_prepare();
   void          ho_failed();
-  void          rrc_connection_release();
   void          radio_link_failure();
   void          leave_connected();
 

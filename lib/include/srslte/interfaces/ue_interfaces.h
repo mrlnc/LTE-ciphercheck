@@ -49,6 +49,25 @@ typedef enum {
   AUTH_SYNCH_FAILURE
 } auth_result_t;
 
+typedef enum {
+  SMC_RESULT_NULL = 0,
+  SMC_RESULT_ATTACH,
+  SMC_RESULT_SMC,
+  SMC_RESULT_REJECT,
+  SMC_RESULT_ERR_RRC,
+  SMC_RESULT_ERR_AUTH,
+  SMC_RESULT_ERR,
+  SMC_RESULT_N_ITEMS,
+} smc_attach_result_t;
+
+static const char smc_attach_result_text[SMC_RESULT_N_ITEMS][100] = {"NULL",
+                                                            "Attach Successful",
+                                                            "Attach Successful and SMC received",
+                                                            "Attach Reject",
+                                                            "RRC Error",
+                                                            "Auth Error", 
+                                                            "Unknown Error"};
+
 // UE interface
 class ue_interface
 {
@@ -201,6 +220,7 @@ public:
                                   srslte::byte_buffer_t *dedicatedInfoNAS) = 0;
   virtual void set_ue_idenity(LIBLTE_RRC_S_TMSI_STRUCT s_tmsi) = 0;
   virtual bool is_connected() = 0;
+  virtual void rrc_connection_release() = 0;
   virtual std::string get_rb_name(uint32_t lcid) = 0;
 };
 

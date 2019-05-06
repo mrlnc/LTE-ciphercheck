@@ -113,6 +113,8 @@ public:
     return true;
   }
   bool is_connected() {return false;}
+  void rrc_connection_release() {};
+
 
   uint16_t get_mcc() { return mcc; }
   uint16_t get_mnc() { return mnc; }

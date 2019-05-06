@@ -85,6 +85,16 @@ void nas::init(usim_interface_nas *usim_,
     have_ctxt = true;
   }
 
+  bzero(&eia_caps, sizeof(eia_caps));
+  bzero(&eea_caps, sizeof(eea_caps));
+  eia_caps[1] = true; // INTEGRITY_ALGORITHM_ID_128_EIA1
+  eia_caps[2] = true; // INTEGRITY_ALGORITHM_ID_128_EIA2
+  eea_caps[0] = true; // CIPHERING_ALGORITHM_ID_EEA0
+  eea_caps[1] = true; // CIPHERING_ALGORITHM_ID_128_EEA1
+  eea_caps[2] = true; // CIPHERING_ALGORITHM_ID_128_EEA2
+
+  attach_result = SMC_RESULT_NULL;
+
   // set seed for rand (used in CHAP auth)
   srand(time(NULL));
 
@@ -173,11 +183,27 @@ bool nas::attach_request() {
 }
 
 bool nas::deattach_request() {
-  state = EMM_STATE_DEREGISTERED_INITIATED;
-  nas_log->info("Dettach request not supported\n");
-  return false;
+  state = EMM_STATE_DEREGISTERED;
+
+  bzero(&ctxt, sizeof(nas_sec_ctxt));
+  have_guti = false;
+  have_ctxt = false;
+
+  while (rrc->is_connected()) {
+    rrc->rrc_connection_release();
+    usleep(100000);
+  }
+
+  attach_result = SMC_RESULT_NULL;
+
+  return true;
 }
 
+void nas::set_sec_capabilities(uint eia_mask, uint eea_mask) {
+  nas_log->info("Setting Security Capabilities: EIA %i EEA %i\n", eia_mask, eea_mask);
+  _unzip(eea_caps, eea_mask);
+  _unzip(eia_caps, eia_mask);
+}
 
 bool nas::is_attached() {
   return state == EMM_STATE_REGISTERED;
@@ -283,6 +309,9 @@ void nas::select_plmn() {
   }
 }
 
+smc_attach_result_t nas::get_attach_result() {
+  return attach_result;
+}
 
 void nas::write_pdu(uint32_t lcid, byte_buffer_t *pdu) {
   uint8 pd = 0;
@@ -325,24 +354,29 @@ void nas::write_pdu(uint32_t lcid, byte_buffer_t *pdu) {
 
   switch (msg_type) {
     case LIBLTE_MME_MSG_TYPE_ATTACH_ACCEPT:
+      attach_result = SMC_RESULT_ATTACH;
       parse_attach_accept(lcid, pdu);
       break;
     case LIBLTE_MME_MSG_TYPE_ATTACH_REJECT:
+      attach_result = SMC_RESULT_REJECT;
       parse_attach_reject(lcid, pdu);
       break;
     case LIBLTE_MME_MSG_TYPE_AUTHENTICATION_REQUEST:
       parse_authentication_request(lcid, pdu);
       break;
     case LIBLTE_MME_MSG_TYPE_AUTHENTICATION_REJECT:
+      attach_result = SMC_RESULT_ERR_AUTH;
       parse_authentication_reject(lcid, pdu);
       break;
     case LIBLTE_MME_MSG_TYPE_IDENTITY_REQUEST:
       parse_identity_request(lcid, pdu);
       break;
     case LIBLTE_MME_MSG_TYPE_SECURITY_MODE_COMMAND:
+      attach_result = SMC_RESULT_SMC;
       parse_security_mode_command(lcid, pdu);
       break;
     case LIBLTE_MME_MSG_TYPE_SERVICE_REJECT:
+      attach_result = SMC_RESULT_ERR;
       parse_service_reject(lcid, pdu);
       break;
     case LIBLTE_MME_MSG_TYPE_ESM_INFORMATION_REQUEST:
@@ -390,6 +424,9 @@ void nas::start_pcap(srslte::nas_pcap *pcap_)
 {
   pcap = pcap_;
 }
+void nas::stop_pcap() {
+  pcap = NULL;
+}
 
 /*******************************************************************************
  * Security
@@ -403,6 +440,10 @@ void nas::integrity_generate(uint8_t *key_128,
                              uint8_t *mac) {
   switch (ctxt.integ_algo) {
     case INTEGRITY_ALGORITHM_ID_EIA0:
+      /* EIA0 probably expects all-zero MAC */
+      for (int i = 0; i < 4; i++) {
+          mac[i] = 0x0;
+      }
       break;
     case INTEGRITY_ALGORITHM_ID_128_EIA1:
       security_128_eia1(key_128,
@@ -448,15 +489,36 @@ bool nas::integrity_check(byte_buffer_t *pdu)
                        pdu->N_bytes-5,
                        &exp_mac[0]);
 
-    // Check if expected mac equals the sent mac
-    for(i=0; i<4; i++){
-      if(exp_mac[i] != mac[i]){
-        nas_log->warning("Integrity check failure. Local: count=%d, [%02x %02x %02x %02x], "
-                             "Received: count=%d, [%02x %02x %02x %02x]\n",
-                         ctxt.rx_count, exp_mac[0], exp_mac[1], exp_mac[2], exp_mac[3],
-                         pdu->msg[5], mac[0], mac[1], mac[2], mac[3]);
-        return false;
-      }
+    // Integrity check DISABLED! Always returns true!
+    bool all_zero = true;
+    switch (ctxt.integ_algo) {
+    case INTEGRITY_ALGORITHM_ID_EIA0:
+        for (i = 0; i < 4; i++) {
+          if ( mac[i] != 0x0 ) {
+            all_zero = false;
+          }
+        }
+        if (!all_zero) {
+          nas_log->info("EIA0 selected but MAC is non-zero: %02x%02x%02x%02x\n",
+                          mac[0], mac[1], mac[2], mac[3]);
+        }
+        break;
+    case INTEGRITY_ALGORITHM_ID_128_EIA1:
+    case INTEGRITY_ALGORITHM_ID_128_EIA2:
+        // Check if expected mac equals the sent mac
+        for(i=0; i<4; i++){
+          if(exp_mac[i] != mac[i]){
+            nas_log->warning("Integrity check failure. Local: count=%d, [%02x %02x %02x %02x], "
+                                "Received: count=%d, [%02x %02x %02x %02x]\n",
+                            ctxt.rx_count, exp_mac[0], exp_mac[1], exp_mac[2], exp_mac[3],
+                            pdu->msg[5], mac[0], mac[1], mac[2], mac[3]);
+            //return false;
+          }
+        }
+        break;
+    default:
+        nas_log->warning("Unsupported Integrity Algorithm: %i!\n", ctxt.integ_algo);
+        break;
     }
     nas_log->info("Integrity check ok. Local: count=%d, Received: count=%d\n",
                   ctxt.rx_count, pdu->msg[5]);
@@ -854,8 +916,17 @@ void nas::parse_security_mode_command(uint32_t lcid, byte_buffer_t *pdu)
 
   // Check capabilities replay
   if(!check_cap_replay(&sec_mode_cmd.ue_security_cap)) {
-    nas_log->warning("Sending Security Mode Reject due to security capabilities mismatch\n");
-    send_security_mode_reject(LIBLTE_MME_EMM_CAUSE_UE_SECURITY_CAPABILITIES_MISMATCH);
+    nas_log->info("SEC_CAPS: Replay mismatch. Recv: EEA %i%i%i%i, EIA %i%i%i%i\n", 
+        sec_mode_cmd.ue_security_cap.eea[0], sec_mode_cmd.ue_security_cap.eea[1],
+        sec_mode_cmd.ue_security_cap.eea[2], sec_mode_cmd.ue_security_cap.eea[3],
+        sec_mode_cmd.ue_security_cap.eia[0], sec_mode_cmd.ue_security_cap.eia[1],
+        sec_mode_cmd.ue_security_cap.eia[2], sec_mode_cmd.ue_security_cap.eia[3]);
+    nas_log->info("SEC_CAPS: Replay mismatch. Sent: EEA %i%i%i%i, EIA %i%i%i%i\n",
+        eea_caps[0], eea_caps[1], eea_caps[2], eea_caps[3],
+        eia_caps[0], eia_caps[1], eia_caps[2], eia_caps[3]);
+
+    // do not send reject, since we want to allow non-integrity
+    //send_security_mode_reject(LIBLTE_MME_EMM_CAUSE_UE_SECURITY_CAPABILITIES_MISMATCH);
     pool->deallocate(pdu);
     return;
   }
@@ -869,8 +940,9 @@ void nas::parse_security_mode_command(uint32_t lcid, byte_buffer_t *pdu)
 
   // Check capabilities
   if(!eea_caps[ctxt.cipher_algo] || !eia_caps[ctxt.integ_algo]) {
-    nas_log->warning("Sending Security Mode Reject due to security capabilities mismatch\n");
-    send_security_mode_reject(LIBLTE_MME_EMM_CAUSE_UE_SECURITY_CAPABILITIES_MISMATCH);
+    nas_log->warning("Security capabilities mismatch\n");
+    // don't send reject
+    //send_security_mode_reject(LIBLTE_MME_EMM_CAUSE_UE_SECURITY_CAPABILITIES_MISMATCH);
     pool->deallocate(pdu);
     return;
   }
@@ -885,8 +957,9 @@ void nas::parse_security_mode_command(uint32_t lcid, byte_buffer_t *pdu)
                  ctxt.integ_algo, ctxt.rx_count, lcid);
 
   if (integrity_check(pdu) != true) {
-    nas_log->warning("Sending Security Mode Reject due to integrity check failure\n");
-    send_security_mode_reject(LIBLTE_MME_EMM_CAUSE_MAC_FAILURE);
+    nas_log->warning("Integrity check failure\n");
+    // dont send reject, we want to allow non-integrity
+    //send_security_mode_reject(LIBLTE_MME_EMM_CAUSE_MAC_FAILURE);
     pool->deallocate(pdu);
     return;
   }
@@ -1513,6 +1586,23 @@ std::string nas::emm_info_str(LIBLTE_MME_EMM_INFORMATION_MSG_STRUCT *info)
   }
   return ss.str();
 }
+
+void nas::_unzip(bool *caps, uint8_t compressed) {
+  unsigned int tmp = compressed;
+  for (int i = 0; i < 4; i++) {
+    caps[i] = (unsigned int)(tmp & 0x01);
+    tmp >>= 1;
+  }
+}
+
+void nas::_zip(bool *caps, uint8_t *compressed) {
+  unsigned int tmp = 0;
+  for (int i = 0; i < 4; i++) {
+    tmp |= (caps[i] << (i));
+  }
+  *compressed = tmp;
+}
+
 
 
 } // namespace srsue

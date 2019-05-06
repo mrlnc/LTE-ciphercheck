@@ -82,6 +82,7 @@ void pdcp_entity::init(srsue::rlc_interface_pdcp      *rlc_,
   log->debug("Init %s\n", rrc->get_rb_name(lcid).c_str());
 }
 
+
 // Reestablishment procedure: 36.323 5.2
 void pdcp_entity::reestablish() {
   // For SRBs
@@ -98,9 +99,30 @@ void pdcp_entity::reestablish() {
 
 void pdcp_entity::reset()
 {
-  active      = false;
-  if(log)
-    log->debug("Reset %s\n", rrc->get_rb_name(lcid).c_str());
+  //active      = false;
+  //if(log)
+  //  log->debug("Reset %s\n", rrc->get_rb_name(lcid).c_str());
+
+  if (lcid != 0) {
+    active        = false;
+  }
+  tx_count      = 0;
+  rx_count      = 0;
+  do_integrity  = false;
+  do_encryption = false;
+
+  cfg.sn_len    = 0;
+  sn_len_bytes  = 0;
+
+  if(cfg.is_control) {
+    cfg.sn_len   = 5;
+    sn_len_bytes = 1;
+  }
+  if(cfg.is_data) {
+    cfg.sn_len   = 12;
+    sn_len_bytes = 2;
+  }
+
 }
 
 bool pdcp_entity::is_active()
@@ -169,6 +191,7 @@ void pdcp_entity::enable_encryption()
 }
 
 // RLC interface
+// RLC interface
 void pdcp_entity::write_pdu(byte_buffer_t *pdu)
 {
   log->info_hex(pdu->msg, pdu->N_bytes, "RX %s PDU, do_integrity = %s, do_encryption = %s",
@@ -225,7 +248,6 @@ void pdcp_entity::write_pdu(byte_buffer_t *pdu)
   }
   rx_count++;
 }
-
 void pdcp_entity::integrity_generate( uint8_t  *msg,
                                       uint32_t  msg_len,
                                       uint8_t  *mac)
@@ -235,6 +257,10 @@ void pdcp_entity::integrity_generate( uint8_t  *msg,
   switch(integ_algo)
   {
   case INTEGRITY_ALGORITHM_ID_EIA0:
+    /* EIA0 probably expects all-zero MAC */
+    for (int i = 0; i < 4; i++) {
+        mac[i] = 0x0;
+    }
     break;
   case INTEGRITY_ALGORITHM_ID_128_EIA1:
     security_128_eia1(&k_int[16],
@@ -255,6 +281,11 @@ void pdcp_entity::integrity_generate( uint8_t  *msg,
                       mac);
     break;
   default:
+    /* EIA0 probably expects all-zero MAC */
+    for (int i = 0; i < 4; i++) {
+        mac[i] = 0x0;
+    }
+    break;
     break;
   }
 }
@@ -293,10 +324,20 @@ bool pdcp_entity::integrity_verify(uint8_t  *msg,
   default:
     break;
   }
-
+  
+  bool mac_zero = true;
   switch(integ_algo)
   {
   case INTEGRITY_ALGORITHM_ID_EIA0:
+    for (i = 0; i < 4; i++) {
+        if (mac[i] != 0x0) {
+            mac_zero = false;
+        }
+    }
+    if (!mac_zero) {
+        log->info("EIA0 selected but MAC is non-zero: %02x%02x%02x%02x\n",
+            mac[0], mac[1], mac[2], mac[3]);
+    }
     break;
   case INTEGRITY_ALGORITHM_ID_128_EIA1: // Intentional fall-through
   case INTEGRITY_ALGORITHM_ID_128_EIA2:
@@ -317,7 +358,8 @@ bool pdcp_entity::integrity_verify(uint8_t  *msg,
     break;
   }
 
-  return isValid;
+  return true;
+  //return isValid;
 }
 
 void pdcp_entity::cipher_encrypt(uint8_t  *msg,

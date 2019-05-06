@@ -132,6 +132,8 @@ typedef struct {
   std::string   ue_category_str;
   nas_args_t    nas;
   expert_args_t expert;
+  uint32_t      initial_sec_caps_eia;
+  uint32_t      initial_sec_caps_eea;
 }all_args_t;
 
 typedef enum {
@@ -177,6 +179,9 @@ public:
   virtual bool get_metrics(ue_metrics_t &m) = 0;
 
   virtual void pregenerate_signals(bool enable) = 0;
+  virtual void set_sec_capabilities(uint eia_mask, uint eea_mask) = 0;
+  virtual smc_attach_result_t get_attach_result() = 0;
+  virtual void pcap_start(const char* filename, const char* nas_filename, uint32_t ue_id) = 0;
 
   srslte::log_filter rf_log;
   rf_metrics_t     rf_metrics;

@@ -86,6 +86,11 @@ public:
   void pregenerate_signals(bool enable);
 
   void radio_overflow();
+  void set_sec_capabilities(uint eia_mask, uint eea_mask);
+  void pcap_start(const char* filename, const char* nas_filename, uint32_t ue_id);
+
+
+  smc_attach_result_t get_attach_result();
 
 private:
   virtual ~ue();

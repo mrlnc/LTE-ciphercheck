@@ -61,8 +61,6 @@ static const char emm_state_text[EMM_STATE_N_ITEMS][100] = {"NULL",
                                                             "DEREGISTERED INITIATED",
                                                             "TRACKING AREA UPDATE INITIATED"};
 
-static const bool eia_caps[8] = {false, true, true, false, false, false, false, false};
-static const bool eea_caps[8] = {true,  true, true, false, false, false, false, false};
 
 class nas
   : public nas_interface_rrc,
@@ -91,11 +89,22 @@ public:
   // UE interface
   bool attach_request();
   bool deattach_request();
+  void set_sec_capabilities(uint eia_mask, uint eea_mask);
+
 
   // PCAP
   void start_pcap(srslte::nas_pcap *pcap_);
+  void stop_pcap();
+
+  smc_attach_result_t get_attach_result();
 
 private:
+
+  bool eia_caps[8];
+  bool eea_caps[8];
+
+  smc_attach_result_t attach_result;
+
   srslte::byte_buffer_pool *pool;
   srslte::log *nas_log;
   rrc_interface_nas *rrc;
@@ -223,6 +232,9 @@ private:
     }
     return true;
   }
+
+  void _unzip(bool *caps, uint8_t compressed);
+  void _zip(bool *caps, uint8_t *compressed);
 };
 
 } // namespace srsue

@@ -33,7 +33,7 @@
 #include "srslte/interfaces/ue_interfaces.h"
 #include "srslte/common/security.h"
 #include "srslte/common/threads.h"
-
+#include "srslte/common/block_queue.h"
 
 namespace srslte {
 
@@ -128,6 +128,7 @@ private:
                       uint8_t  *msg);
 
   uint8_t  get_bearer_id(uint8_t lcid);
+
 };
 
 /****************************************************************************

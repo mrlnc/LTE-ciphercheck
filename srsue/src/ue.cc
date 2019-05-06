@@ -279,14 +279,14 @@ void ue::stop()
     mac.stop();
     phy.stop();
     radio.stop();
-    
-    usleep(1e5);
-    if(args->pcap.enable) {
+
+        usleep(1e5);
+    /* if(args->pcap.enable) {
        mac_pcap.close();
     }
     if(args->pcap.nas_enable) {
        nas_pcap.close();
-    }
+    } */
     if(args->trace.enable) {
       phy.write_trace(args->trace.phy_filename);
       radio.write_trace(args->trace.radio_filename);
@@ -306,6 +306,14 @@ bool ue::deattach() {
 bool ue::is_attached()
 {
   return rrc.is_connected();
+}
+
+smc_attach_result_t ue::get_attach_result() {
+  return nas.get_attach_result();
+}
+
+void ue::set_sec_capabilities(uint eia_mask, uint eea_mask) {
+  nas.set_sec_capabilities(eia_mask, eea_mask);
 }
 
 void ue::start_plot() {
@@ -361,6 +369,18 @@ void ue::rf_msg(srslte_rf_error_t error)
     ue->cleanup();
     exit(-1);
   }
+}
+
+void ue::pcap_start(const char* filename, const char* nas_filename, uint32_t ue_id) {
+  printf("Setting PCAP to file://%s and file://%s\n", filename, nas_filename);
+  mac.stop_pcap();
+  mac_pcap.close();
+  mac_pcap.open(filename);
+  mac.start_pcap(&mac_pcap);
+  nas.stop_pcap();
+  nas_pcap.close();
+  nas_pcap.open(nas_filename, ue_id);
+  nas.start_pcap(&nas_pcap);
 }
 
 } // namespace srsue

@@ -108,6 +108,8 @@ public:
   void start_noncont(uint32_t preamble_index, uint32_t prach_mask);
 
   void start_pcap(srslte::mac_pcap* pcap);
+  void stop_pcap() { pcap = NULL; }
+
 private: 
   static bool uecrid_callback(void *arg, uint64_t uecri);
 

@@ -61,6 +61,7 @@ void pdcp::stop()
 {
 }
 
+
 void pdcp::reestablish() {
   for(uint32_t i=0;i<SRSLTE_N_RADIO_BEARERS;i++) {
     if (pdcp_array[i].is_active()) {
@@ -106,6 +107,7 @@ void pdcp::write_sdu_mch(uint32_t lcid, byte_buffer_t *sdu)
     pdcp_array_mrb[lcid].write_sdu(sdu);
   }
 }
+
 void pdcp::add_bearer(uint32_t lcid, srslte_pdcp_config_t cfg)
 {
   if(lcid >= SRSLTE_N_RADIO_BEARERS) {

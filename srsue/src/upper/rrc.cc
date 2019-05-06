@@ -498,14 +498,12 @@ bool rrc::connection_request(LIBLTE_RRC_CON_REQ_EST_CAUSE_ENUM cause,
       } else if (mac_timers->timer_get(t300)->is_expired()) {
         // T300 is expired: 5.3.3.6
         rrc_log->info("Timer T300 expired: ConnectionRequest timed out\n");
-        mac->reset();
-        set_mac_default();
-        rlc->reestablish();
+        leave_connected();
       } else {
         // T300 is stopped but RRC not Connected is because received Reject: Section 5.3.3.8
         rrc_log->info("Timer T300 stopped: Received ConnectionReject\n");
-        mac->reset();
-        set_mac_default();
+        leave_connected();
+
       }
 
     } else {
@@ -1286,7 +1284,7 @@ void rrc::send_con_restablish_request(LIBLTE_RRC_CON_REEST_REQ_CAUSE_ENUM cause)
                 cellid, pci, crnti, N_bytes, N_bits);
 
   // Compute MAC-I
-  uint8_t mac_key[4];
+  uint8_t mac_key[4] = {0};
   switch(integ_algo) {
     case INTEGRITY_ALGORITHM_ID_128_EIA1:
       security_128_eia1(&k_rrc_int[16],
@@ -1651,7 +1649,7 @@ void rrc::leave_connected()
   rrc_log->info("Going RRC_IDLE\n");
   if (phy->cell_is_camping()) {
     // Receive paging
-    mac->pcch_start_rx();
+    //mac->pcch_start_rx();
     // Instruct PHY to measure serving cell for cell reselection
     phy->meas_start(phy->get_current_earfcn(), phy->get_current_pci());
   }
