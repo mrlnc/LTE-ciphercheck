@@ -1,87 +1,32 @@
-srsLTE
+Security Algorithm Support in LTE Networks
 ========
 
-[![Coverity Scan Build Status](https://scan.coverity.com/projects/10045/badge.svg)](https://scan.coverity.com/projects/10045)
+This software tests the network-side support of security algorithms in LTE. We show the impact of misconfigured networks in a research paper ([PDF](https://www.infsec.ruhr-uni-bochum.de/media/infsec/veroeffentlichungen/2019/04/23/wisec19-final123.pdf)):
+> Merlin Chlosta, David Rupprecht, Thorsten Holz, and Christina Pöpper. 2019. LTE Security Disabled—Misconfiguration in Commercial Networks. In 12th ACM Conference on Security and Privacy in Wireless and Mobile Networks (WiSec ’19), May 15–17, 2019, Miami, FL, USA. ACM, New York, NY, USA, 6 pages. https://doi.org/10.1145/3317549.3324927
 
-srsLTE is a free and open-source LTE software suite developed by SRS (www.softwareradiosystems.com). 
 
-It includes:
-  * srsUE - a complete SDR LTE UE application featuring all layers from PHY to IP
-  * srsENB - a complete SDR LTE eNodeB application 
-  * srsEPC - a light-weight LTE core network implementation with MME, HSS and S/P-GW
-  * a highly modular set of common libraries for PHY, MAC, RLC, PDCP, RRC, NAS, S1AP and GW layers. 
 
-srsLTE is released under the AGPLv3 license and uses software from the OpenLTE project (http://sourceforge.net/projects/openlte) for some security functions and for RRC/NAS message parsing.
+This software enhances [srsLTE](https://github.com/srslte/srsLTE)'s User Equipment (UE) component `srsUE` with a mode for testing LTE networks.
 
-Common Features
----------------
+srsLTE is a free and open-source LTE software suite developed by SRS (www.softwareradiosystems.com). srsLTE is released under the AGPLv3 license and uses software from the OpenLTE project (http://sourceforge.net/projects/openlte) for some security functions and for RRC/NAS message parsing.
 
- * LTE Release 8 compliant (with selected features of Release 9)
- * FDD configuration
- * Tested bandwidths: 1.4, 3, 5, 10, 15 and 20 MHz
- * Transmission mode 1 (single antenna), 2 (transmit diversity), 3 (CCD) and 4 (closed-loop spatial multiplexing)
- * Frequency-based ZF and MMSE equalizer
- * Evolved multimedia broadcast and multicast service (eMBMS)
- * Highly optimized Turbo Decoder available in Intel SSE4.1/AVX2 (+100 Mbps) and standard C (+25 Mbps)
- * MAC, RLC, PDCP, RRC, NAS, S1AP and GW layers
- * Detailed log system with per-layer log levels and hex dumps
- * MAC layer wireshark packet capture
- * Command-line trace metrics
- * Detailed input configuration files
-
-srsUE Features
+Features
 --------------
- 
- * Cell search and synchronization procedure for the UE
- * Soft USIM supporting Milenage and XOR authentication
- * Hard USIM support using PCSC framework
- * Virtual network interface *tun_srsue* created upon network attach
- * 150 Mbps DL in 20 MHz MIMO TM3/TM4 configuration in i7 Quad-Core CPU.
- * 75 Mbps DL in 20 MHz SISO configuration in i7 Quad-Core CPU.
- * 36 Mbps DL in 10 MHz SISO configuration in i5 Dual-Core CPU.
+* connect to commercial LTE networks with SIM card
+* Snow3G, AES and ZUC security algorithms
+* NULL-algorithm support
+* automatically test which security algorithms the network accepts
 
-srsUE has been fully tested and validated with the following network equipment: 
- * Amarisoft LTE100 eNodeB and EPC
- * Nokia FlexiRadio family FSMF system module with 1800MHz FHED radio module and TravelHawk EPC simulator
- * Huawei DBS3900 
- * Octasic Flexicell LTE-FDD NIB
-
-srsENB Features
----------------
-
- * Round Robin MAC scheduler with FAPI-like C++ API
- * SR support
- * Periodic and Aperiodic CQI feedback support
- * Standard S1AP and GTP-U interfaces to the Core Network
- * 150 Mbps DL in 20 MHz MIMO TM3/TM4 with commercial UEs
- * 75 Mbps DL in SISO configuration with commercial UEs
- * 50 Mbps UL in 20 MHz with commercial UEs
-
-srsENB has been tested and validated with the following handsets:
- * LG Nexus 5 and 4
- * Motorola Moto G4 plus and G5
- * Huawei P9/P9lite, P10/P10lite, P20/P20lite
- * Huawei dongles: E3276 and E398
-
-srsEPC Features
----------------
-
- * Single binary, light-weight LTE EPC implementation with:
-   * MME (Mobility Management Entity) with standard S1AP and GTP-U interface to eNB
-   * S/P-GW with standard SGi exposed as virtual network interface (TUN device)
-   * HSS (Home Subscriber Server) with configurable user database in CSV format
 
 Hardware
 --------
 
-The library currently supports the Ettus Universal Hardware Driver (UHD) and the bladeRF driver. Thus, any hardware supported by UHD or bladeRF can be used. There is no sampling rate conversion, therefore the hardware should support 30.72 MHz clock in order to work correctly with LTE sampling frequencies and decode signals from live LTE base stations. 
+We currently base on the srsLTE release 18.06, which should support USRP, BladeRF and LimeSDR. LimeSDR mini support was added in later releases and is not included here, yet.
 
 We have tested the following hardware: 
  * USRP B210
- * USRP B205mini
- * USRP X300
- * limeSDR
- * bladeRF
+
+Accessing commercial networks requires a SIM card and a `pcsc` compatible SIM card reader.
 
 Build Instructions
 ------------------
@@ -125,14 +70,6 @@ mkdir build
 cd build
 cmake ../
 make
-make test
-```
-
-Install srsLTE:
-
-```
-sudo make install
-sudo srslte_install_configs.sh
 ```
 
 This installs srsLTE and also copies the default srsLTE config files to
@@ -160,45 +97,8 @@ If you have installed the software suite using ```sudo make install``` and
 have installed the example config files using ```sudo srslte_install_configs.sh```,
 you may just start all applications with their default parameters.
 
-### srsEPC
-
-On machine 1, run srsEPC as follows:
-
-```
-sudo srsepc
-```
-
-Using the default configuration, this creates a virtual network interface
-named "srs_spgw_sgi" on machine 1 with IP 172.16.0.1. All connected UEs
-will be assigned an IP in this network.
-
-### srsENB
-
-Also on machine 1, but in another console, run srsENB as follows:
-
-```
-sudo srsenb
-```
-
 ### srsUE
 
-On machine 2, run srsUE as follows:
-
-```
-sudo srsue
-```
-
-Using the default configuration, this creates a virtual network interface
-named "tun_srsue" on machine 2 with an IP in the network 172.16.0.x.
-Assuming the UE has been assigned IP 172.16.0.2, you may now exchange
-IP traffic with machine 1 over the LTE link. For example, run a ping to 
-the default SGi IP address:
-
-```
-ping 172.16.0.1
-```
 
 Support
 ========
-
-Mailing list: http://www.softwareradiosystems.com/mailman/listinfo/srslte-users
