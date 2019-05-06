@@ -601,9 +601,8 @@ int main(int argc, char *argv[])
       ue->deattach();
     }
 
-    /* Require either Attach Accept or Attach Reject to finish test case.
-     * ONLY if we test ZUC (0b1000), SMC is enough, because we don't implement ZUC */ 
-    if (attach_result == SMC_RESULT_ATTACH || attach_result == SMC_RESULT_REJECT || ((attach_result == SMC_RESULT_SMC) && (sec_caps_eea & 0b1000 || sec_caps_eia & 0b1000) )){
+    /* Require either Attach Accept or Attach Reject to finish test case. */ 
+    if (attach_result == SMC_RESULT_ATTACH || attach_result == SMC_RESULT_REJECT){
       // this run is finished
       printf("###############################################################\n");
 

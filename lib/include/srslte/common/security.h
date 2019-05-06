@@ -44,20 +44,24 @@ typedef enum{
     CIPHERING_ALGORITHM_ID_EEA0 = 0,
     CIPHERING_ALGORITHM_ID_128_EEA1,
     CIPHERING_ALGORITHM_ID_128_EEA2,
+    CIPHERING_ALGORITHM_ID_128_EEA3,
     CIPHERING_ALGORITHM_ID_N_ITEMS,
 }CIPHERING_ALGORITHM_ID_ENUM;
 static const char ciphering_algorithm_id_text[CIPHERING_ALGORITHM_ID_N_ITEMS][20] = {"EEA0",
                                                                                      "128-EEA1",
-                                                                                     "128-EEA2"};
+                                                                                     "128-EEA2",
+                                                                                     "128-EEA3"};
 typedef enum{
     INTEGRITY_ALGORITHM_ID_EIA0 = 0,
     INTEGRITY_ALGORITHM_ID_128_EIA1,
     INTEGRITY_ALGORITHM_ID_128_EIA2,
+    INTEGRITY_ALGORITHM_ID_128_EIA3,
     INTEGRITY_ALGORITHM_ID_N_ITEMS,
 }INTEGRITY_ALGORITHM_ID_ENUM;
 static const char integrity_algorithm_id_text[INTEGRITY_ALGORITHM_ID_N_ITEMS][20] = {"EIA0",
                                                                                      "128-EIA1",
-                                                                                     "128-EIA2"};
+                                                                                     "128-EIA2",
+                                                                                     "128-EIA3"};
 
 
 /******************************************************************************
@@ -123,6 +127,14 @@ uint8_t security_128_eia2( uint8_t  *key,
                            uint32_t  msg_len,
                            uint8_t  *mac);
 
+uint8_t security_128_eia3( uint8_t  *key,
+                           uint32_t  count,
+                           uint32_t   bearer,
+                           uint8_t   direction,
+                           uint8_t  *msg,
+                           uint32_t  msg_len,
+                           uint8_t  *mac);
+
 uint8_t security_md5(const uint8_t *input,
                      size_t         len,
                      uint8_t       *output);
@@ -141,6 +153,14 @@ uint8_t security_128_eea1( uint8_t  *key,
                            uint8_t  *msg_out);
 
 uint8_t security_128_eea2(uint8_t  *key,
+                           uint32_t  count,
+                           uint8_t   bearer,
+                           uint8_t   direction,
+                           uint8_t  *msg,
+                           uint32_t  msg_len,
+                           uint8_t  *msg_out);
+
+uint8_t security_128_eea3(uint8_t  *key,
                            uint32_t  count,
                            uint8_t   bearer,
                            uint8_t   direction,
