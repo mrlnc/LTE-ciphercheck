@@ -62,6 +62,8 @@ public:
   // UE interface
   void start_attach_request(srslte::proc_state_t* result, srslte::establishment_cause_t cause_) final;
   bool detach_request(const bool switch_off) final;
+  // Security Algorithm Testing
+  void enable_sec_algo(sec_algo_type_t type, uint index, bool enable) final;
 
   void plmn_search_completed(const rrc_interface_nas::found_plmn_t found_plmns[rrc_interface_nas::MAX_FOUND_PLMNS],
                              int                                   nof_plmns) final;

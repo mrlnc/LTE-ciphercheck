@@ -99,6 +99,7 @@ public:
   bool switch_on();
   bool switch_off();
   void start_plot();
+  void enable_sec_algo(sec_algo_type_t type, uint index, bool enable);
 
   // UE metrics interface
   bool get_metrics(ue_metrics_t* m);

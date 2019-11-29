@@ -80,6 +80,8 @@ public:
   virtual bool switch_on()  = 0;
   virtual bool switch_off() = 0;
 
+  virtual void enable_sec_algo(sec_algo_type_t type, uint index, bool enable) = 0;
+
   // UE metrics interface
   virtual bool get_metrics(stack_metrics_t* metrics) = 0;
 };

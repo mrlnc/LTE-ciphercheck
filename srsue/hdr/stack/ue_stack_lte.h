@@ -69,6 +69,7 @@ public:
   bool switch_off();
   bool enable_data();
   bool disable_data();
+  void enable_sec_algo(sec_algo_type_t type, uint index, bool enable);
   void stop();
 
   bool get_metrics(stack_metrics_t* metrics);

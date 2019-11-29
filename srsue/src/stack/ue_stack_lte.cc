@@ -214,6 +214,11 @@ bool ue_stack_lte::switch_off()
   return detach_sent;
 }
 
+void ue_stack_lte::enable_sec_algo(sec_algo_type_t type, uint index, bool enable)
+{
+  nas.enable_sec_algo(type, index, enable);
+}
+
 bool ue_stack_lte::enable_data()
 {
   // perform attach request

@@ -474,8 +474,21 @@ bool nas::paging(s_tmsi_t* ue_identity)
   return true;
 }
 
-void nas::set_barring(barring_t barring)
+void nas::enable_sec_algo(sec_algo_type_t type, uint index, bool enable)
 {
+  if (index > 3) {
+    nas_log->error("Security Algorithm %s%u is invalid\n", type == EIA ? "EIA" : "EEA", index);
+    return;
+  }
+
+  if (type == EIA) {
+    eia_caps[index] = enable;
+  } else { // EEA
+    eea_caps[index] = enable;
+  }
+}
+
+void nas::set_barring(barring_t barring) {
   current_barring = barring;
 }
 
