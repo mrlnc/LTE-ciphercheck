@@ -563,10 +563,10 @@ proc_outcome_t rrc::connection_request_proc::init(rrc*                          
     return proc_outcome_t::error;
   }
 
-  if (rrc_ptr->state != RRC_STATE_IDLE) {
+ /*  if (rrc_ptr->state != RRC_STATE_IDLE) {
     log_h->warning("Requested RRC connection establishment while not in IDLE\n");
     return proc_outcome_t::error;
-  }
+  } */
 
   if (rrc_ptr->timers->get(rrc_ptr->t302)->is_running()) {
     Info("Requested RRC connection establishment while T302 is running\n");

@@ -129,10 +129,10 @@ nas::rrc_connect_proc::init(nas* nas_ptr_, srslte::establishment_cause_t cause_,
 {
   nas_ptr = nas_ptr_;
 
-  if (nas_ptr->rrc->is_connected()) {
+  /* if (nas_ptr->rrc->is_connected()) {
     Info("Stopping. Reason: Already connected\n");
     return proc_outcome_t::success;
-  }
+  } */
 
   if (pdu == nullptr) {
     // Generate service request or attach request message
