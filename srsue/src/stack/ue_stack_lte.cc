@@ -200,6 +200,17 @@ bool ue_stack_lte::switch_off()
     detach_sent = false;
   }
 
+  // wait for max. 5s for RRC connection teardown
+  cnt = 0;
+  while (rrc.is_connected() && ++cnt <= timeout) {
+    usleep(1000);
+  }
+  if (rrc.is_connected() && detach_sent) {
+    nas_log.warning("Detach sent but RRC still connected after %ds.\n", timeout);
+  } else if (rrc.is_connected() && !detach_sent) {
+    nas_log.warning("Detach not sent and RRC still connected after %ds.\n", timeout);
+  }
+
   return detach_sent;
 }
 
