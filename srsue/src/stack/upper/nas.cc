@@ -138,10 +138,10 @@ proc_outcome_t nas::plmn_search_proc::react(const plmn_search_complete_t& t)
 
 proc_outcome_t nas::rrc_connect_proc::init(srslte::establishment_cause_t cause_, srslte::unique_byte_buffer_t pdu)
 {
-  if (nas_ptr->rrc->is_connected()) {
-    ProcInfo("Stopping. Reason: Already connected\n");
+  /* if (nas_ptr->rrc->is_connected()) {
+    Info("Stopping. Reason: Already connected\n");
     return proc_outcome_t::success;
-  }
+  } */
 
   if (pdu == nullptr) {
     // Generate service request or attach request message
