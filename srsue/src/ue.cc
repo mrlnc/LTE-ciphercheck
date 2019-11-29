@@ -250,6 +250,11 @@ void ue::start_plot()
   phy->start_plot();
 }
 
+void ue::enable_sec_algo(sec_algo_type_t type, uint index, bool enable)
+{
+  stack->enable_sec_algo(type, index, enable);
+}
+
 bool ue::get_metrics(ue_metrics_t* m)
 {
   bzero(m, sizeof(ue_metrics_t));

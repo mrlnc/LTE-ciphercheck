@@ -48,6 +48,8 @@ typedef enum {
   AUTH_SYNCH_FAILURE
 } auth_result_t;
 
+typedef enum { EIA, EEA } sec_algo_type_t;
+
 // USIM interface for NAS
 class usim_interface_nas
 {
@@ -215,6 +217,9 @@ class nas_interface_ue
 public:
   virtual void start_attach_request(srslte::proc_state_t* proc_result) = 0;
   virtual bool detach_request(const bool switch_off)                   = 0;
+
+  // Security Algorithm Testing
+  virtual void enable_sec_algo(sec_algo_type_t type, uint index, bool enable) = 0;
 };
 
 // PDCP interface for RRC
