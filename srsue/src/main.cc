@@ -578,6 +578,24 @@ int main(int argc, char* argv[])
   pthread_t input;
   pthread_create(&input, nullptr, &input_loop, &args);
 
+  uint cnt      = 0;
+  bool attached = false;
+  /* check if we can enter the network with basic settings */
+  do {
+    attached = ue.switch_on();
+    cnt++;
+  } while (!attached && cnt <= 3 && running);
+  if (!attached) {
+    cout << "Could not attach to the network. Check configuration.\n" << endl;
+
+    pthread_cancel(input);
+    pthread_join(input, nullptr);
+    metricshub.stop();
+    ue.stop();
+    cout << "---  exiting  ---" << endl;
+    exit(SRSLTE_ERROR);
+  }
+
   for (uint8_t eia_mask = 0; eia_mask <= 0b1111 && running ; eia_mask++) {
     for (uint8_t eea_mask = 0; eea_mask <= 0b1111 && running; eea_mask++) {
       ue.enable_sec_algo(EIA, 0, eia_mask & 0b0001);
@@ -590,8 +608,8 @@ int main(int argc, char* argv[])
       ue.enable_sec_algo(EEA, 3, eea_mask & 0b1000);
 
       cout << "Attaching UE... EIA: " << unsigned(eia_mask) << " EEA: " << unsigned(eea_mask) << endl;
-      uint cnt = 0;
-      bool attached = false;
+      cnt = 0;
+      attached = false;
       do {
         attached = ue.switch_on();
         cnt++;
@@ -617,7 +635,7 @@ int main(int argc, char* argv[])
     }
   }
 
-  ue.switch_off();
+  //ue.switch_off();
   pthread_cancel(input);
   pthread_join(input, nullptr);
   metricshub.stop();
