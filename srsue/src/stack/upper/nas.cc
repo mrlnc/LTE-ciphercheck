@@ -1567,7 +1567,7 @@ void nas::gen_attach_request(byte_buffer_t* msg)
   gen_pdn_connectivity_request(&attach_req.esm_msg);
 
   // GUTI or IMSI attach
-  if (have_guti && have_ctxt) {
+  if (have_guti && have_ctxt && !cfg.force_imsi_attach) {
     attach_req.tmsi_status_present      = true;
     attach_req.tmsi_status              = LIBLTE_MME_TMSI_STATUS_VALID_TMSI;
     attach_req.eps_mobile_id.type_of_id = LIBLTE_MME_EPS_MOBILE_ID_TYPE_GUTI;
