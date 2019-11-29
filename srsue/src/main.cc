@@ -578,15 +578,43 @@ int main(int argc, char* argv[])
   pthread_t input;
   pthread_create(&input, nullptr, &input_loop, &args);
 
-  cout << "Attaching UE..." << endl;
-  ue.switch_on();
+  for (uint8_t eia_mask = 0; eia_mask <= 0b1111 && running ; eia_mask++) {
+    for (uint8_t eea_mask = 0; eea_mask <= 0b1111 && running; eea_mask++) {
+      ue.enable_sec_algo(EIA, 0, eia_mask & 0b0001);
+      ue.enable_sec_algo(EIA, 1, eia_mask & 0b0010);
+      ue.enable_sec_algo(EIA, 2, eia_mask & 0b0100);
+      ue.enable_sec_algo(EIA, 3, eia_mask & 0b1000);
+      ue.enable_sec_algo(EEA, 0, eea_mask & 0b0001);
+      ue.enable_sec_algo(EEA, 1, eea_mask & 0b0010);
+      ue.enable_sec_algo(EEA, 2, eea_mask & 0b0100);
+      ue.enable_sec_algo(EEA, 3, eea_mask & 0b1000);
 
-  if (args.gui.enable) {
-    ue.start_plot();
-  }
+      cout << "Attaching UE... EIA: " << unsigned(eia_mask) << " EEA: " << unsigned(eea_mask) << endl;
+      uint cnt = 0;
+      bool attached = false;
+      do {
+        attached = ue.switch_on();
+        cnt++;
+      } while (!attached && cnt <= 2 && running );
 
-  while (running) {
-    sleep(1);
+      if (attached) {
+        cout << "Supported configuration: EIA: " << unsigned(eia_mask) << " EEA: " << unsigned(eea_mask) << endl;
+      }
+
+      if (running) {
+        if (args.gui.enable) {
+          ue.start_plot();
+        }
+      }
+
+      cout << "Detaching UE..." << endl;
+      cnt = 0;
+      bool detached = false;
+      do {
+        detached = ue.switch_off();
+        cnt++;
+      } while (running && !detached && cnt <= 2);
+    }
   }
 
   ue.switch_off();
