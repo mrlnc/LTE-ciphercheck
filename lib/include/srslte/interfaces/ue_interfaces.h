@@ -50,6 +50,13 @@ typedef enum {
 
 typedef enum { EIA, EEA } sec_algo_type_t;
 
+// Stack interface for NAS
+class stack_interface_nas
+{
+public:
+  virtual void report_attach_result(bool is_attached, uint8_t originating_msg, uint8_t eia_mask, uint8_t eea_mask) = 0;
+};
+
 // USIM interface for NAS
 class usim_interface_nas
 {

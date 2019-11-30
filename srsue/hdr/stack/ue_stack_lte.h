@@ -53,6 +53,7 @@ namespace srsue {
 class ue_stack_lte final : public ue_stack_base,
                            public stack_interface_phy_lte,
                            public stack_interface_gw,
+                           public stack_interface_nas,
                            public stack_interface_mac,
                            public stack_interface_rrc,
                            public thread
@@ -70,10 +71,14 @@ public:
   bool enable_data();
   bool disable_data();
   void enable_sec_algo(sec_algo_type_t type, uint index, bool enable);
+
   void stop();
 
   bool get_metrics(stack_metrics_t* metrics);
   bool is_rrc_connected();
+
+  // interface for NAS
+  void report_attach_result(bool is_attached, uint8_t originating_msg, uint8_t eia_mask, uint8_t eea_mask);
 
   // RRC interface for PHY
   void in_sync() final;

@@ -127,7 +127,7 @@ int ue_stack_lte::init(const stack_args_t& args_, srslte::logger* logger_)
   mac.init(phy, &rlc, &rrc, &timers, this);
   rlc.init(&pdcp, &rrc, &timers, 0 /* RB_ID_SRB0 */);
   pdcp.init(&rlc, &rrc, gw);
-  nas.init(usim.get(), &rrc, gw, args.nas);
+  nas.init(this, usim.get(), &rrc, gw, args.nas);
   rrc.init(phy, &mac, &rlc, &pdcp, &nas, usim.get(), gw, &timers, this, args.rrc);
 
   running = true;
@@ -202,10 +202,13 @@ bool ue_stack_lte::switch_off()
   while (rrc.is_connected() && ++cnt <= timeout) {
     usleep(1000);
   }
-  if (rrc.is_connected() && detach_sent) {
+  if (rrc.is_connected()) {
+    if (detach_sent) {
     nas_log.warning("Detach sent but RRC still connected after %ds.\n", timeout);
-  } else if (rrc.is_connected() && !detach_sent) {
+    } else {
     nas_log.warning("Detach not sent and RRC still connected after %ds.\n", timeout);
+  }
+    // TODO force RRC connection reset
   }
 
   return detach_sent;
@@ -214,6 +217,15 @@ bool ue_stack_lte::switch_off()
 void ue_stack_lte::enable_sec_algo(sec_algo_type_t type, uint index, bool enable)
 {
   nas.enable_sec_algo(type, index, enable);
+}
+
+void ue_stack_lte::report_attach_result(bool is_attached, uint8_t originating_msg, uint8_t eia_mask, uint8_t eea_mask)
+{
+  nas_log.console("NAS reports attach result: Attached? %s, with EIA %u, EEA %u, determined in message %s\n",
+                  is_attached ? "Yes" : "No",
+                  unsigned(eia_mask),
+                  unsigned(eea_mask),
+                  liblte_nas_msg_type_to_string(originating_msg));
 }
 
 bool ue_stack_lte::enable_data()
