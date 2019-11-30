@@ -235,11 +235,12 @@ nas::nas(srslte::log* log_, srslte::timer_handler* timers_) :
 {
 }
 
-void nas::init(usim_interface_nas* usim_, rrc_interface_nas* rrc_, gw_interface_nas* gw_, const nas_args_t& cfg_)
+void nas::init(stack_interface_nas* stack_, usim_interface_nas* usim_, rrc_interface_nas* rrc_, gw_interface_nas* gw_, const nas_args_t& cfg_)
 {
-  usim  = usim_;
-  rrc   = rrc_;
-  gw    = gw_;
+  stack = stack_;
+  usim = usim_;
+  rrc = rrc_;
+  gw = gw_;
   state = EMM_STATE_DEREGISTERED;
 
   if (!usim->get_home_plmn_id(&home_plmn)) {
@@ -434,6 +435,27 @@ bool nas::detach_request(const bool switch_off)
   }
   return false;
 }
+
+void nas::report_attach_result(bool is_attached, uint8_t originating_msg) {
+  if (stack == nullptr) {
+    nas_log->error("UE stack ptr not initialized.\n");
+  }
+
+  uint8_t eia_mask{};
+  uint8_t eea_mask{};
+  eia_mask |= eia_caps[0] ? 0 : 0b0001;
+  eia_mask |= eia_caps[1] ? 0 : 0b0010;
+  eia_mask |= eia_caps[2] ? 0 : 0b0100;
+  eia_mask |= eia_caps[3] ? 0 : 0b1000;
+
+  eea_mask |= eea_caps[0] ? 0 : 0b0001;
+  eea_mask |= eea_caps[1] ? 0 : 0b0010;
+  eea_mask |= eea_caps[2] ? 0 : 0b0100;
+  eea_mask |= eea_caps[3] ? 0 : 0b1000;
+
+  stack->report_attach_result(is_attached, originating_msg, eia_mask, eea_mask);
+}
+
 
 void nas::enter_emm_deregistered()
 {
@@ -893,6 +915,8 @@ void nas::parse_attach_accept(uint32_t lcid, unique_byte_buffer_t pdu)
   LIBLTE_MME_ATTACH_ACCEPT_MSG_STRUCT attach_accept = {};
   liblte_mme_unpack_attach_accept_msg((LIBLTE_BYTE_MSG_STRUCT*)pdu.get(), &attach_accept);
 
+  report_attach_result(true, LIBLTE_MME_MSG_TYPE_ATTACH_ACCEPT);
+
   if (attach_accept.eps_attach_result == LIBLTE_MME_EPS_ATTACH_RESULT_EPS_ONLY) {
     // TODO: Handle t3412.unit
     // TODO: Handle tai_list
@@ -1131,6 +1155,14 @@ void nas::parse_attach_reject(uint32_t lcid, unique_byte_buffer_t pdu)
     t3410.stop();
   }
 
+  uint8_t eia_mask{};
+  uint8_t eea_mask{};
+  for (uint8_t i = 0; i < 4; i++) {
+    eia_mask |= eia_caps[i] << i;
+    eea_mask |= eea_caps[i] << i;
+  }
+
+  stack->report_attach_result(false, LIBLTE_MME_MSG_TYPE_ATTACH_REJECT, eia_mask, eea_mask);
   enter_emm_deregistered();
   // TODO: Command RRC to release?
 }
@@ -1227,6 +1259,15 @@ void nas::parse_security_mode_command(uint32_t lcid, unique_byte_buffer_t pdu)
                 sec_mode_cmd.nas_ksi.nas_ksi,
                 ciphering_algorithm_id_text[sec_mode_cmd.selected_nas_sec_algs.type_of_eea],
                 integrity_algorithm_id_text[sec_mode_cmd.selected_nas_sec_algs.type_of_eia]);
+ 
+  uint8_t eia_mask{};
+  uint8_t eea_mask{};
+  for (uint8_t i = 0; i < 4; i++) {
+    eia_mask |= eia_caps[i] << i;
+    eea_mask |= eea_caps[i] << i;
+  }
+
+  stack->report_attach_result(true, LIBLTE_MME_MSG_TYPE_SECURITY_MODE_COMMAND, eia_mask, eea_mask);
 
   if (sec_mode_cmd.nas_ksi.tsc_flag != LIBLTE_MME_TYPE_OF_SECURITY_CONTEXT_FLAG_NATIVE) {
     nas_log->error("Mapped security context not supported\n");
