@@ -1,4 +1,8 @@
-This tool quickly tests LTE networks for their cipher support. It's for use by telecom operators only.
+This tool quickly tests LTE networks for their cipher support. It's for use by telecom operators only. It was presented at WiSec 2019 ([Paper](./img/wisec19-final123.pdf), [Talk](./imgWiSec19-LTE_Security_Disabled.pdf)):
+
+> Merlin Chlosta, David Rupprecht, Thorsten Holz, and Christina Pöpper. 2019. LTE Security Disabled—Misconfiguration in Commercial Networks. In 12th ACM Conference on Security and Privacy in Wireless and Mobile Networks (WiSec ’19), May 15–17, 2019, Miami, FL, USA. ACM, New York, NY, USA, 6 pages. https://doi.org/10.1145/3317549.3324927
+
+This branch is a work in progress (rebasing on more recent srsLTE release).
 
 # Encryption in LTE Networks
 
@@ -38,3 +42,5 @@ We perform one connection setup for each possible combination of ciphers and che
 # Credits
 
 srsLTE is a free and open-source LTE software suite developed by SRS (www.softwareradiosystems.com).
+
+[Katharina Kohls](www.kkohls.org) allowed me to use the pictograms, taken from her research papers or presentations. Thanks!
