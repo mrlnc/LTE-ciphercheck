@@ -202,12 +202,10 @@ Basically, this software is just [srsLTE](https://github.com/srsLTE/srsLTE) with
 
 When the UE starts the connection procedure, it will transmit a list of supported ciphers. The network then selects one of these, based on it's own capabilities. If there's no match, or some policy prohibits some cipher (e.g., NULL), the network must reject the connection attempt.
 
-We perform one connection setup for each possible combination of ciphers and check whether the network accepts or denies.
-
 For example, if the UE signals only NULL ciphers for encryption and integrity protection, the network should not establish a connection as in this example:
 ![Setup](./img/test_procedure.png)
 
-Since there are 256 combinations, a single test run performs at least that many attaches to the network.
+We perform one connection setup for each possible combination of ciphers and check whether the network accepts or denies. Since there are 256 combinations, a single test run performs at least that many attaches to the network.
 
 # Credits
 
