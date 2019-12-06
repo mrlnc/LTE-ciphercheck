@@ -1,5 +1,3 @@
-srsLTE
-========
 
 [![Build Status](https://travis-ci.org/srsLTE/srsLTE.svg?branch=master)](https://travis-ci.org/srsLTE/srsLTE)
 [![Language grade: C/C++](https://img.shields.io/lgtm/grade/cpp/g/srsLTE/srsLTE.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/srsLTE/srsLTE/context:cpp)
@@ -171,50 +169,46 @@ real-time thread priorities and to permit creation of virtual network interfaces
 
 srsENB and srsEPC can run on the same machine as a network-in-the-box configuration.
 srsUE needs to run on a separate machine.
+=======
+This tool quickly tests LTE networks for their cipher support. It's for use by telecom operators only.
 
-If you have installed the software suite using ```sudo make install``` and
-have installed the example config files using ```srslte_install_configs.sh user```,
-you may just start all applications with their default parameters.
+# Encryption in LTE Networks
 
-### srsEPC
+LTE networks protect user traffic and control data with encryption, and additionally integrity-protect control data. We're going to have a look at the method that is used for securing the data.
 
-On machine 1, run srsEPC as follows:
+![Transport Security](./img/transport_security.png)
 
-```
-sudo srsepc
-```
+There are multiple ciphers available, thus, smartphone and network need to negotiate which one to use. Snow3G, AES and ZUC actually protect the messages. However, there's a 'NULL' algorithm for testing purposes and emergency calls -- it does not provide any protection.
 
-Using the default configuration, this creates a virtual network interface
-named "srs_spgw_sgi" on machine 1 with IP 172.16.0.1. All connected UEs
-will be assigned an IP in this network.
+![Cipher Support](./img/cipher_support.png)
 
-### srsENB
+Networks and smartphones must support AES and Snow3G. ZUC is optional. The NULL algorithm may only be selected for emergency purposes.
 
-Also on machine 1, but in another console, run srsENB as follows:
+## Impact of Misconfigurations
 
-```
-sudo srsenb
-```
+If a network is poorly configured, man-in-the-middle attacks become trivial. If a network accepts unprotected connections, attackers can impersonate benign users.
 
-### srsUE
+![MitM](./img/mitm.png)
 
-On machine 2, run srsUE as follows:
+# Setup
 
-```
-sudo srsue
-```
+The whole setup looks like this:
 
-Using the default configuration, this creates a virtual network interface
-named "tun_srsue" on machine 2 with an IP in the network 172.16.0.x.
-Assuming the UE has been assigned IP 172.16.0.2, you may now exchange
-IP traffic with machine 1 over the LTE link. For example, run a ping to 
-the default SGi IP address:
+![Setup](./img/system_overview.png)
 
-```
-ping 172.16.0.1
-```
+Basically, this software is just [srsLTE](https://github.com/srsLTE/srsLTE) with minor changes. See the [srsLTE README](https://github.com/srsLTE/srsLTE/blob/master/README.md) for detailed build instructions, and [www.srslte.com](srslte.com) for documentation, guides and project news. srsLTE is released under the AGPLv3 license and uses software from the OpenLTE project (http://sourceforge.net/projects/openlte) for some security functions and for NAS message parsing.
 
-Support
-========
+# Testing Procedure
 
-Mailing list: http://www.softwareradiosystems.com/mailman/listinfo/srslte-users
+When the UE starts the connection procedure, it will transmit a list of supported ciphers. The network then selects one of these, based on it's own capabilities. If there's no match, or some policy prohibits some cipher (e.g., NULL), the network must reject the connection attempt.
+
+We perform one connection setup for each possible combination of ciphers and check whether the network accepts or denies.
+
+For example, if the UE signals only NULL ciphers for encryption and integrity protection, the network should not establish a connection as in this example:
+![Setup](./img/test_procedure.png)
+
+Since there are 256 combinations, a single test run performs at least that many attaches to the network.
+
+# Credits
+
+srsLTE is a free and open-source LTE software suite developed by SRS (www.softwareradiosystems.com).
