@@ -4,7 +4,7 @@ This tool quickly tests LTE networks for their cipher support. It's for use by t
 
 > Merlin Chlosta, David Rupprecht, Thorsten Holz, and Christina Pöpper. 2019. LTE Security Disabled—Misconfiguration in Commercial Networks. In 12th ACM Conference on Security and Privacy in Wireless and Mobile Networks (WiSec ’19), May 15–17, 2019, Miami, FL, USA. ACM, New York, NY, USA, 6 pages. https://doi.org/10.1145/3317549.3324927
 
-This branch is a work in progress (rebasing on more recent srsLTE release).
+This branch is a work in progress (rebasing on more recent srsLTE release). If you got questions or suggestions, drop me an email: [merlin.chlosta+eia0@rub.de](merlin.chlosta+eia0@rub.de)
 
 # Encryption in LTE Networks
 
