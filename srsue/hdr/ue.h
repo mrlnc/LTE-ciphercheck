@@ -59,6 +59,7 @@ typedef struct {
   int         all_hex_limit;
   int         file_max_size;
   std::string filename;
+  std::string results_filename;
 } log_args_t;
 
 typedef struct {

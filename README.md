@@ -45,4 +45,4 @@ We perform one connection setup for each possible combination of ciphers and che
 
 srsLTE is a free and open-source LTE software suite developed by SRS (www.softwareradiosystems.com).
 
-[Katharina Kohls](www.kkohls.org) allowed me to use the pictograms, taken from her research papers or presentations. Thanks!
+[Katharina Kohls](kkohls.org) allowed me to use the pictograms, taken from her research papers or presentations. Thanks!

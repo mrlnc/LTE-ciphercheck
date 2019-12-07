@@ -78,7 +78,12 @@ public:
   bool is_rrc_connected();
 
   // interface for NAS
-  void report_attach_result(bool is_attached, uint8_t originating_msg, uint8_t eia_mask, uint8_t eea_mask);
+  void report_attach_result(bool                        is_attached,
+                            uint8_t                     originating_msg,
+                            uint8_t                     eia_caps,
+                            srslte::INTEGRITY_ALGORITHM_ID_ENUM eia,
+                            uint8_t                     eea_caps,
+                            srslte::CIPHERING_ALGORITHM_ID_ENUM eea);
 
   // RRC interface for PHY
   void in_sync() final;

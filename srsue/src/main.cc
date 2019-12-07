@@ -25,6 +25,10 @@
 #include <stdlib.h>
 #include <unistd.h>
 
+#include <bitset>
+#include <iostream>
+#include <fstream>
+#include <string>
 #include <boost/program_options.hpp>
 #include <boost/program_options/parsers.hpp>
 #include <fstream>
@@ -140,6 +144,7 @@ static int parse_args(all_args_t* args, int argc, char* argv[])
     ("log.all_hex_limit", bpo::value<int>(&args->log.all_hex_limit)->default_value(32), "ALL log hex dump limit")
 
     ("log.filename", bpo::value<string>(&args->log.filename)->default_value("/tmp/ue.log"), "Log filename")
+    ("log.results_filename", bpo::value<string>(&args->log.results_filename)->default_value("/tmp/sec_results.log"), "Sec Algo Test Results filename")
     ("log.file_max_size", bpo::value<int>(&args->log.file_max_size)->default_value(-1), "Maximum file size (in kilobytes). When passed, multiple files are created. Default -1 (single file)")
 
     ("usim.mode", bpo::value<string>(&args->stack.usim.mode)->default_value("soft"), "USIM mode (soft or pcsc)")
@@ -544,6 +549,9 @@ int main(int argc, char* argv[])
 
   srslte::logger_stdout logger_stdout;
   srslte::logger_file   logger_file;
+  srslte::logger_file   logger_file_results;
+  srslte::log_filter    log_results;
+  
 
   // Setup logging
   srslte::logger* logger = nullptr;
@@ -553,6 +561,16 @@ int main(int argc, char* argv[])
     logger_file.init(args.log.filename, args.log.file_max_size);
     logger = &logger_file;
   }
+  srslte::logger* results_logger = nullptr;
+  if (args.log.results_filename == "stdout") {
+    results_logger = &logger_stdout;
+  } else {
+    logger_file_results.init(args.log.results_filename, args.log.file_max_size);
+    results_logger = &logger_file_results;
+  }
+  // Init UE log
+  log_results.init("Main  ", logger);
+  log_results.set_level(srslte::LOG_LEVEL_INFO);
 
   // Create UE instance
   srsue::ue ue;
@@ -596,6 +614,9 @@ int main(int argc, char* argv[])
     exit(SRSLTE_ERROR);
   }
 
+  /* eia_mask / eea_mask:
+   * 0b0001 means ExA0 is enabled,
+   * 0b1000 means ExA3 is enabled. */
   for (uint8_t eia_mask = 0; eia_mask <= 0b1111 && running ; eia_mask++) {
     for (uint8_t eea_mask = 0; eea_mask <= 0b1111 && running; eea_mask++) {
       ue.enable_sec_algo(EIA, 0, eia_mask & 0b0001);
@@ -607,16 +628,19 @@ int main(int argc, char* argv[])
       ue.enable_sec_algo(EEA, 2, eea_mask & 0b0100);
       ue.enable_sec_algo(EEA, 3, eea_mask & 0b1000);
 
-      cout << "Attaching UE... EIA: " << unsigned(eia_mask) << " EEA: " << unsigned(eea_mask) << endl;
+      
+      cout << "Attaching UE... EIA: " << bitset<8>(eia_mask) << " EEA: " << bitset<8>(eea_mask) << endl;
       cnt = 0;
       attached = false;
       do {
         attached = ue.switch_on();
         cnt++;
-      } while (!attached && cnt <= 2 && running );
+      } while (!attached && cnt <= 3 && running );
 
       if (attached) {
-        cout << "Supported configuration: EIA: " << unsigned(eia_mask) << " EEA: " << unsigned(eea_mask) << endl;
+        cout << "Supported configuration: EIA: " << bitset<8>(eia_mask) << " EEA: " << bitset<8>(eea_mask) << endl;
+      } else {
+        cout << "Unsupported configuration: EIA: " << bitset<8>(eia_mask) << " EEA: " << bitset<8>(eea_mask) << endl;
       }
 
       if (running) {
