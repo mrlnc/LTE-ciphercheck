@@ -21,6 +21,7 @@
 
 #include "srsue/hdr/stack/ue_stack_lte.h"
 #include "srslte/srslte.h"
+#include <bitset>
 
 using namespace srslte;
 
@@ -219,13 +220,24 @@ void ue_stack_lte::enable_sec_algo(sec_algo_type_t type, uint index, bool enable
   nas.enable_sec_algo(type, index, enable);
 }
 
-void ue_stack_lte::report_attach_result(bool is_attached, uint8_t originating_msg, uint8_t eia_mask, uint8_t eea_mask)
+void ue_stack_lte::report_attach_result(bool                        is_attached,
+                                        uint8_t                     originating_msg,
+                                        uint8_t                     eia_caps,
+                                        srslte::INTEGRITY_ALGORITHM_ID_ENUM eia,
+                                        uint8_t                     eea_caps,
+                                        srslte::CIPHERING_ALGORITHM_ID_ENUM eea)
 {
-  nas_log.console("NAS reports attach result: Attached? %s, with EIA %u, EEA %u, determined in message %s\n",
-                  is_attached ? "Yes" : "No",
-                  unsigned(eia_mask),
-                  unsigned(eea_mask),
-                  liblte_nas_msg_type_to_string(originating_msg));
+  nas_log.console("NAS report: %s -- Capabilities EIA %s, EEA %s",
+                  liblte_nas_msg_type_to_string(originating_msg),
+                  std::bitset<8>(eia_caps).to_string().c_str(),
+                  std::bitset<8>(eea_caps).to_string().c_str());
+  
+  // ciphers are not selected for messages other than security mode command and attach accept
+  // TODO separate reporting functions for these messages; add other interesting parameters?
+  if (originating_msg == LIBLTE_MME_MSG_TYPE_ATTACH_ACCEPT || originating_msg == LIBLTE_MME_MSG_TYPE_SECURITY_MODE_COMMAND) {
+    nas_log.console(" -- Selected Ciphers: EIA%i EEA%i", eia, eea);
+  }
+  nas_log.console("\n");
 }
 
 bool ue_stack_lte::enable_data()

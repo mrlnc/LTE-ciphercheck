@@ -81,7 +81,12 @@ public:
   virtual bool switch_off()       = 0;
 
   virtual void enable_sec_algo(sec_algo_type_t type, uint index, bool enable)                                      = 0;
-  virtual void report_attach_result(bool is_attached, uint8_t originating_msg, uint8_t eia_mask, uint8_t eea_mask) = 0;
+  virtual void report_attach_result(bool                        is_attached,
+                                    uint8_t                     originating_msg,
+                                    uint8_t                     eia_caps,
+                                    srslte::INTEGRITY_ALGORITHM_ID_ENUM eia,
+                                    uint8_t                     eea_caps,
+                                    srslte::CIPHERING_ALGORITHM_ID_ENUM eea) = 0;
 
   // UE metrics interface
   virtual bool get_metrics(stack_metrics_t* metrics) = 0;
