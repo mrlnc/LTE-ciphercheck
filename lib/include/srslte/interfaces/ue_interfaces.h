@@ -47,20 +47,28 @@ typedef enum { AUTH_OK, AUTH_FAILED, AUTH_SYNCH_FAILURE } auth_result_t;
 typedef enum { EIA, EEA } sec_algo_type_t;
 
 // Testbench interface for main/stack
-class testbench_interface_stack {
-  public:
-  virtual bool get_result() = 0;
+class testbench_interface_stack
+{
+public:
+  virtual bool get_result()                                         = 0;
+  virtual bool is_finished()                                        = 0;
+  virtual uint start_testcase(uint8_t _eia_mask, uint8_t _eea_mask) = 0;
 };
 
 // Testbench interface for NAS
-class testbench_interface_nas {
-  public:
-  virtual void report_nas() = 0;
+class testbench_interface_nas
+{
+public:
+  virtual void report_nas()                                             = 0;
+  virtual void report_attach_accept()                                   = 0;
+  virtual void report_attach_reject(uint8_t _cause)                     = 0;
+  virtual void report_nas_security_code_command(uint8_t _eia, uint8_t _eea) = 0;
 };
 
 // Testbench interface for RRC
-class testbench_interface_rrc {
-  public:
+class testbench_interface_rrc
+{
+public:
   virtual void report_rrc() = 0;
 };
 
