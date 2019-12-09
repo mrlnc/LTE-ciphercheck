@@ -66,7 +66,7 @@ public:
   virtual void report_nas()                                             = 0;
   virtual void report_attach_accept()                                   = 0;
   virtual void report_attach_reject(uint8_t _cause)                     = 0;
-  virtual void report_nas_security_code_command(uint8_t _eia, uint8_t _eea) = 0;
+  virtual void report_nas_security_mode_command(uint8_t _eia, uint8_t _eea) = 0;
 };
 
 // Testbench interface for RRC
@@ -74,6 +74,7 @@ class testbench_interface_rrc
 {
 public:
   virtual void report_rrc() = 0;
+  virtual void report_rrc_security_mode_command(uint8_t _eia, uint8_t _eea) = 0;
 };
 
 // USIM interface for NAS

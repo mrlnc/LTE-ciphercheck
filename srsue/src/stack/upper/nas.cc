@@ -1076,7 +1076,7 @@ void nas::parse_attach_reject(uint32_t lcid, unique_byte_buffer_t pdu)
   nas_log->console("Received Attach Reject. Cause= %02X\n", attach_rej.emm_cause);
 
   tb->report_attach_reject(attach_rej.emm_cause);
-  
+
   enter_emm_deregistered();
   // FIXME: Command RRC to release?
 }
@@ -1233,7 +1233,7 @@ void nas::parse_security_mode_command(uint32_t lcid, unique_byte_buffer_t pdu)
     nas_log->warning("Integrity Check error in Security Mode Command\n");
   }
 
-  tb->report_nas_security_code_command(ctxt.integ_algo, ctxt.cipher_algo);
+  tb->report_nas_security_mode_command(ctxt.integ_algo, ctxt.cipher_algo);
 
   ctxt.rx_count++;
 

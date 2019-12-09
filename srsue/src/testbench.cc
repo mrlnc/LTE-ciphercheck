@@ -28,11 +28,11 @@ bool testbench::get_result()
 
 bool testbench::is_finished()
 {
-    auto tc = testcases[current_testcase_id];
-    if (tc != nullptr) {
-        return tc->is_finished();
-    }
-    return false;
+  auto tc = testcases[current_testcase_id];
+  if (tc != nullptr) {
+    return tc->is_finished();
+  }
+  return false;
 }
 
 /* NAS interface */
@@ -56,17 +56,25 @@ void testbench::report_attach_reject(uint8_t _cause)
   }
 };
 
-void testbench::report_nas_security_code_command(uint8_t _eia, uint8_t _eea)
+void testbench::report_nas_security_mode_command(uint8_t _eia, uint8_t _eea)
 {
   auto tc = testcases[current_testcase_id];
   if (tc != nullptr) {
-    tc->report_nas_security_code_command(_eia, _eea);
+    tc->report_nas_security_mode_command(_eia, _eea);
   }
 };
 
 /* RRC interface */
 void testbench::report_rrc(){
 
+};
+
+void testbench::report_rrc_security_mode_command(uint8_t _eia, uint8_t _eea)
+{
+  auto tc = testcases[current_testcase_id];
+  if (tc != nullptr) {
+    tc->report_rrc_security_mode_command(_eia, _eea);
+  }
 };
 
 testbench::testcase::testcase(srslte::log_filter* _log, uint _id, uint8_t _eia_mask, uint8_t _eea_mask)
@@ -90,23 +98,39 @@ testbench::testcase::testcase(srslte::log_filter* _log, uint _id, uint8_t _eia_m
 
 bool testbench::testcase::is_finished()
 {
-    return got_attach_accept || got_attach_reject;
+  return got_attach_accept || got_attach_reject;
 }
 
 void testbench::testcase::report_nas(){};
-void testbench::testcase::report_attach_accept(){
-    log->info("Testcase %u got Attach Accept\n", id);
-    got_attach_accept = true;
+void testbench::testcase::report_attach_accept()
+{
+  log->info("Testcase %u got Attach Accept\n", id);
+  got_attach_accept = true;
 };
-void testbench::testcase::report_attach_reject(uint8_t _cause){
-    log->info("Testcase %u got Attach Reject, cause: %u\n", id, _cause);
-    got_attach_reject = true;
+void testbench::testcase::report_attach_reject(uint8_t _cause)
+{
+  log->info("Testcase %u got Attach Reject, cause: %u\n", id, _cause);
+  got_attach_reject = true;
 };
-void testbench::testcase::report_nas_security_code_command(uint8_t _eia, uint8_t _eea){
-    log->info("Testcase %u got NAS Security Mode Command\n", id);
-    eia = _eia;
-    eea = _eea;
-    got_nas_security_mode_command = true;
+void testbench::testcase::report_nas_security_mode_command(uint8_t _eia, uint8_t _eea)
+{
+  log->info("Testcase %u got NAS Security Mode Command. Integrity: %s, Ciphering: %s\n", 
+            id,
+            srslte::integrity_algorithm_id_text[_eia],
+            srslte::ciphering_algorithm_id_text[_eea]);
+  nas_eia                       = _eia;
+  nas_eea                       = _eea;
+  got_nas_security_mode_command = true;
+};
+void testbench::testcase::report_rrc_security_mode_command(uint8_t _eia, uint8_t _eea)
+{
+  log->info("Testcase %u got RRC Security Mode Command. Integrity: %s, Ciphering: %s\n",
+            id,
+            srslte::integrity_algorithm_id_text[_eia],
+            srslte::ciphering_algorithm_id_text[_eea]);
+  rrc_eia                       = _eia;
+  rrc_eea                       = _eea;
+  got_rrc_security_mode_command = true;
 };
 
 } // namespace srsue

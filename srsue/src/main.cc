@@ -619,6 +619,10 @@ int main(int argc, char* argv[])
     exit(SRSLTE_ERROR);
   }
 
+  cout << "Successfully connected to the network. Configuration is correct.\n" << endl;
+  cout << "Detaching UE..." << endl;
+  ue.switch_off();
+
   uint testcase_id = 0;
 
   /* eia_mask / eea_mask:

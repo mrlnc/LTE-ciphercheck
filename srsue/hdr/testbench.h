@@ -3,6 +3,7 @@
 
 #include "srslte/common/log_filter.h"
 #include "srslte/interfaces/ue_interfaces.h"
+#include "srslte/common/security.h"
 #include <bitset>
 #include <map>
 
@@ -22,8 +23,10 @@ protected:
     bool eia_caps[8] = {};
     bool eea_caps[8] = {};
 
-    uint8_t eia = 0;
-    uint8_t eea = 0;
+    uint8_t nas_eia = 0;
+    uint8_t nas_eea = 0;
+    uint8_t rrc_eia = 0;
+    uint8_t rrc_eea = 0;
 
     srslte::log_filter* log;
 
@@ -45,7 +48,10 @@ protected:
     void report_nas();
     void report_attach_accept();
     void report_attach_reject(uint8_t _cause);
-    void report_nas_security_code_command(uint8_t eia, uint8_t eea);
+    void report_nas_security_mode_command(uint8_t eia, uint8_t eea);
+
+    /* RRC */
+    void report_rrc_security_mode_command(uint8_t _eia, uint8_t _eea);
   };
 
   uint                                        current_testcase_id; // TODO locking
@@ -68,10 +74,11 @@ public:
   void report_nas();
   void report_attach_accept();
   void report_attach_reject(uint8_t _cause);
-  void report_nas_security_code_command(uint8_t eia, uint8_t eea);
+  void report_nas_security_mode_command(uint8_t eia, uint8_t eea);
 
   /* RRC interface */
   void report_rrc();
+  void report_rrc_security_mode_command(uint8_t _eia, uint8_t _eea);
 };
 
 } // namespace srsue
