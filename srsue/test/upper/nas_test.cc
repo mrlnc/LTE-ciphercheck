@@ -226,7 +226,7 @@ int security_command_test()
     nas_args_t cfg;
     cfg.eia = "1,2,3";
     cfg.eea = "0,1,2,3";
-    nas.init(nullptr, &usim, &rrc_dummy, &gw, cfg);
+    nas.init(&usim, &rrc_dummy, &gw, cfg);
     rrc_dummy.init(&nas);
 
     // push auth request PDU to NAS to generate security context
@@ -295,7 +295,7 @@ int mme_attach_request_test()
     srsue::gw  gw;
     stack_dummy stack(&pdcp_dummy, &nas);
 
-    nas.init(nullptr, &usim, &rrc_dummy, &gw, nas_cfg);
+    nas.init(&usim, &rrc_dummy, &gw, nas_cfg);
     rrc_dummy.init(&nas);
 
     gw_args_t gw_args;
@@ -378,7 +378,7 @@ int esm_info_request_test()
     cfg.apn_user          = "srsuser";
     cfg.apn_pass          = "srspass";
     cfg.force_imsi_attach = true;
-    nas.init(nullptr, &usim, &rrc_dummy, &gw, cfg);
+    nas.init(&usim, &rrc_dummy, &gw, cfg);
 
     // push ESM info request PDU to NAS to generate response
     unique_byte_buffer_t tmp = srslte::allocate_unique_buffer(*pool, true);
@@ -428,7 +428,7 @@ int dedicated_eps_bearer_test()
   srsue::nas nas(&nas_log);
   nas_args_t cfg        = {};
   cfg.force_imsi_attach = true; // make sure we get a fresh security context
-  nas.init(nullptr, &usim, &rrc_dummy, &gw, cfg);
+  nas.init(&usim, &rrc_dummy, &gw, cfg);
 
   // push dedicated EPS bearer PDU to NAS
   unique_byte_buffer_t tmp = srslte::allocate_unique_buffer(*pool, true);

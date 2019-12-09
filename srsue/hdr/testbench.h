@@ -18,6 +18,14 @@ private:
         bool eia_caps[8] = {};
         bool eea_caps[8] = {};
 
+        /* NAS */
+        bool got_nas_security_mode_command = false;
+        bool got_attach_accept = false;
+        bool got_attach_reject = false;
+
+        /* RRC */
+        bool got_rrc_security_mode_command = false;
+
         testcase() {};
     };
 

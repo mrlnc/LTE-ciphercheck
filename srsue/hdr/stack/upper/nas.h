@@ -41,8 +41,8 @@ class nas : public nas_interface_rrc, public nas_interface_ue
 {
 public:
   nas(srslte::log* log_);
-  void init(stack_interface_nas* stack_, usim_interface_nas* usim_, rrc_interface_nas* rrc_, gw_interface_nas* gw_, const nas_args_t& args_);
-  void init(stack_interface_nas* stack_, usim_interface_nas* usim_, rrc_interface_nas* rrc_, gw_interface_nas* gw_, testbench_interface_nas* tb_, const nas_args_t& args_);
+  void init(usim_interface_nas* usim_, rrc_interface_nas* rrc_, gw_interface_nas* gw_, const nas_args_t& args_);
+  void init(usim_interface_nas* usim_, rrc_interface_nas* rrc_, gw_interface_nas* gw_, testbench_interface_nas* tb_, const nas_args_t& args_);
   void stop();
   void run_tti(uint32_t tti) final;
 
@@ -78,7 +78,6 @@ public:
 private:
   srslte::byte_buffer_pool* pool    = nullptr;
   srslte::log*              nas_log = nullptr;
-  stack_interface_nas*      stack   = nullptr;
   rrc_interface_nas*        rrc     = nullptr;
   usim_interface_nas*       usim    = nullptr;
   gw_interface_nas*         gw      = nullptr;
@@ -200,7 +199,6 @@ private:
 
   // Other internal helpers
   void enter_emm_deregistered();
-  void report_attach_result(bool is_attached, uint8_t originating_msg);
 
   // security context persistence file
   bool read_ctxt_file(nas_sec_ctxt *ctxt);

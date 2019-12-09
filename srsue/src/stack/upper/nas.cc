@@ -210,13 +210,12 @@ proc_outcome_t nas::rrc_connect_proc::step()
 
 nas::nas(srslte::log* log_) : nas_log(log_), pool(byte_buffer_pool::get_instance()) {}
 
-void nas::init(stack_interface_nas* stack_, usim_interface_nas* usim_, rrc_interface_nas* rrc_, gw_interface_nas* gw_, const nas_args_t& cfg_) {
-  init(stack_, usim_, rrc_, gw_, nullptr, cfg_);
+void nas::init(usim_interface_nas* usim_, rrc_interface_nas* rrc_, gw_interface_nas* gw_, const nas_args_t& cfg_) {
+  init(usim_, rrc_, gw_, nullptr, cfg_);
 }
 
-void nas::init(stack_interface_nas* stack_, usim_interface_nas* usim_, rrc_interface_nas* rrc_, gw_interface_nas* gw_, testbench_interface_nas* tb_, const nas_args_t& cfg_)
+void nas::init(usim_interface_nas* usim_, rrc_interface_nas* rrc_, gw_interface_nas* gw_, testbench_interface_nas* tb_, const nas_args_t& cfg_)
 {
-  stack = stack_;
   usim = usim_;
   rrc = rrc_;
   gw = gw_;
@@ -385,26 +384,6 @@ bool nas::detach_request(const bool switch_off)
       break;
   }
   return false;
-}
-
-void nas::report_attach_result(bool is_attached, uint8_t originating_msg) {
-  if (stack == nullptr) {
-    nas_log->error("UE stack ptr not initialized.\n");
-  }
-
-  uint8_t _eia_caps{};
-  uint8_t _eea_caps{};
-  _eia_caps |= eia_caps[0] ? 0b0001 : 0;
-  _eia_caps |= eia_caps[1] ? 0b0010 : 0;
-  _eia_caps |= eia_caps[2] ? 0b0100 : 0;
-  _eia_caps |= eia_caps[3] ? 0b1000 : 0;
-
-  _eea_caps |= eea_caps[0] ? 0b0001 : 0;
-  _eea_caps |= eea_caps[1] ? 0b0010 : 0;
-  _eea_caps |= eea_caps[2] ? 0b0100 : 0;
-  _eea_caps |= eea_caps[3] ? 0b1000 : 0;
-
-  stack->report_attach_result(is_attached, originating_msg, _eia_caps, ctxt.integ_algo, _eea_caps, ctxt.cipher_algo);
 }
 
 void nas::enter_emm_deregistered()
@@ -874,8 +853,8 @@ void nas::parse_attach_accept(uint32_t lcid, unique_byte_buffer_t pdu)
   LIBLTE_MME_ATTACH_ACCEPT_MSG_STRUCT attach_accept = {};
   liblte_mme_unpack_attach_accept_msg((LIBLTE_BYTE_MSG_STRUCT*)pdu.get(), &attach_accept);
 
-  report_attach_result(true, LIBLTE_MME_MSG_TYPE_ATTACH_ACCEPT);
-
+/*   report_attach_result(true, LIBLTE_MME_MSG_TYPE_ATTACH_ACCEPT);
+ */
   if (attach_accept.eps_attach_result == LIBLTE_MME_EPS_ATTACH_RESULT_EPS_ONLY) {
     //FIXME: Handle t3412.unit
     //FIXME: Handle tai_list
@@ -1096,8 +1075,8 @@ void nas::parse_attach_reject(uint32_t lcid, unique_byte_buffer_t pdu)
   nas_log->warning("Received Attach Reject. Cause= %02X\n", attach_rej.emm_cause);
   nas_log->console("Received Attach Reject. Cause= %02X\n", attach_rej.emm_cause);
 
-  report_attach_result(false, LIBLTE_MME_MSG_TYPE_ATTACH_REJECT);
-
+/*   report_attach_result(false, LIBLTE_MME_MSG_TYPE_ATTACH_REJECT);
+ */
   enter_emm_deregistered();
   // FIXME: Command RRC to release?
 }
@@ -1151,8 +1130,8 @@ void nas::parse_authentication_request(uint32_t lcid, unique_byte_buffer_t pdu, 
 void nas::parse_authentication_reject(uint32_t lcid, unique_byte_buffer_t pdu)
 {
   nas_log->warning("Received Authentication Reject\n");
-  report_attach_result(false, LIBLTE_MME_MSG_TYPE_AUTHENTICATION_REJECT);
-  enter_emm_deregistered();
+/*   report_attach_result(false, LIBLTE_MME_MSG_TYPE_AUTHENTICATION_REJECT);
+ */  enter_emm_deregistered();
   // FIXME: Command RRC to release?
 }
 
@@ -1254,8 +1233,8 @@ void nas::parse_security_mode_command(uint32_t lcid, unique_byte_buffer_t pdu)
     nas_log->warning("Integrity Check error in Security Mode Command\n");
   }
 
-  report_attach_result(true, LIBLTE_MME_MSG_TYPE_SECURITY_MODE_COMMAND);
-
+/*   report_attach_result(true, LIBLTE_MME_MSG_TYPE_SECURITY_MODE_COMMAND);
+ */
   ctxt.rx_count++;
 
   // Take security context into use
@@ -1303,8 +1282,8 @@ void nas::parse_service_reject(uint32_t lcid, unique_byte_buffer_t pdu)
     return;
   }
 
-  report_attach_result(false, LIBLTE_MME_MSG_TYPE_SERVICE_REJECT);
-
+/*   report_attach_result(false, LIBLTE_MME_MSG_TYPE_SERVICE_REJECT);
+ */
   nas_log->console("Received service reject with EMM cause=0x%x.\n", service_reject.emm_cause);
   if (service_reject.t3446_present) {
     nas_log->info("Received service reject with EMM cause=0x%x and t3446=%d\n", service_reject.emm_cause,
@@ -1353,8 +1332,8 @@ void nas::parse_detach_request(uint32_t lcid, unique_byte_buffer_t pdu)
   liblte_mme_unpack_detach_request_msg((LIBLTE_BYTE_MSG_STRUCT*)pdu.get(), &detach_request);
   ctxt.rx_count++;
 
-  report_attach_result(false, LIBLTE_MME_MSG_TYPE_DETACH_REQUEST);
-
+/*   report_attach_result(false, LIBLTE_MME_MSG_TYPE_DETACH_REQUEST);
+ */
   switch (state) {
     case EMM_STATE_DEREGISTERED_INITIATED:
       nas_log->info("Received detach from network while performing UE initiated detach. Aborting UE detach.\n");

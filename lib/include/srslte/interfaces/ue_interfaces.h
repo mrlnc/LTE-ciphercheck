@@ -68,18 +68,6 @@ class testbench_interface_rrc {
   virtual void report_rrc() = 0;
 };
 
-// Stack interface for NAS
-class stack_interface_nas
-{
-public:
-  virtual void report_attach_result(bool                        is_attached,
-                                    uint8_t                     originating_msg,
-                                    uint8_t                     eia_caps,
-                                    srslte::INTEGRITY_ALGORITHM_ID_ENUM eia,
-                                    uint8_t                     eea_caps,
-                                    srslte::CIPHERING_ALGORITHM_ID_ENUM eea) = 0;
-};
-
 // USIM interface for NAS
 class usim_interface_nas
 {
