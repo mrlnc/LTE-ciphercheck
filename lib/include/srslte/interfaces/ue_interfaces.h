@@ -50,6 +50,24 @@ typedef enum {
 
 typedef enum { EIA, EEA } sec_algo_type_t;
 
+// Testbench interface for main/stack
+class testbench_interface_stack {
+  public:
+  virtual bool get_result() = 0;
+};
+
+// Testbench interface for NAS
+class testbench_interface_nas {
+  public:
+  virtual void report_nas() = 0;
+};
+
+// Testbench interface for RRC
+class testbench_interface_rrc {
+  public:
+  virtual void report_rrc() = 0;
+};
+
 // Stack interface for NAS
 class stack_interface_nas
 {

@@ -210,12 +210,17 @@ proc_outcome_t nas::rrc_connect_proc::step()
 
 nas::nas(srslte::log* log_) : nas_log(log_), pool(byte_buffer_pool::get_instance()) {}
 
-void nas::init(stack_interface_nas* stack_, usim_interface_nas* usim_, rrc_interface_nas* rrc_, gw_interface_nas* gw_, const nas_args_t& cfg_)
+void nas::init(stack_interface_nas* stack_, usim_interface_nas* usim_, rrc_interface_nas* rrc_, gw_interface_nas* gw_, const nas_args_t& cfg_) {
+  init(stack_, usim_, rrc_, gw_, nullptr, cfg_);
+}
+
+void nas::init(stack_interface_nas* stack_, usim_interface_nas* usim_, rrc_interface_nas* rrc_, gw_interface_nas* gw_, testbench_interface_nas* tb_, const nas_args_t& cfg_)
 {
   stack = stack_;
   usim = usim_;
   rrc = rrc_;
   gw = gw_;
+  tb = tb_;
   state = EMM_STATE_DEREGISTERED;
 
   if (!usim->get_home_plmn_id(&home_plmn)) {

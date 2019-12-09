@@ -302,6 +302,18 @@ public:
             stack_interface_rrc*   stack_,
             const rrc_args_t&      args_);
 
+  void init(phy_interface_rrc_lte* phy_,
+            mac_interface_rrc*     mac_,
+            rlc_interface_rrc*     rlc_,
+            pdcp_interface_rrc*    pdcp_,
+            nas_interface_rrc*     nas_,
+            usim_interface_rrc*    usim_,
+            gw_interface_rrc*      gw_,
+            srslte::timers*        timers_,
+            testbench_interface_rrc* tb_,
+            stack_interface_rrc*   stack_,
+            const rrc_args_t&      args_);
+
   void stop();
 
   void get_metrics(rrc_metrics_t& m);
@@ -375,6 +387,7 @@ private:
   nas_interface_rrc*        nas     = nullptr;
   usim_interface_rrc*       usim    = nullptr;
   gw_interface_rrc*         gw      = nullptr;
+  testbench_interface_rrc*  tb      = nullptr;
   stack_interface_rrc*      stack   = nullptr;
 
   srslte::unique_byte_buffer_t dedicated_info_nas;

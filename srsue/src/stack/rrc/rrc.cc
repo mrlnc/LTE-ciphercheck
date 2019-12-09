@@ -101,6 +101,22 @@ void rrc::init(phy_interface_rrc_lte* phy_,
                stack_interface_rrc*   stack_,
                const rrc_args_t&      args_)
 {
+  init(phy_, mac_, rlc_, pdcp_, nas_, usim_, gw_, timers_, nullptr, stack_, args_);
+}
+
+
+void rrc::init(phy_interface_rrc_lte* phy_,
+               mac_interface_rrc*     mac_,
+               rlc_interface_rrc*     rlc_,
+               pdcp_interface_rrc*    pdcp_,
+               nas_interface_rrc*     nas_,
+               usim_interface_rrc*    usim_,
+               gw_interface_rrc*      gw_,
+               srslte::timers*        timers_,
+               testbench_interface_rrc* tb_,
+               stack_interface_rrc*   stack_,
+               const rrc_args_t&      args_)
+{
   pool  = byte_buffer_pool::get_instance();
   phy = phy_;
   mac = mac_;
@@ -109,6 +125,7 @@ void rrc::init(phy_interface_rrc_lte* phy_,
   nas   = nas_;
   usim  = usim_;
   gw    = gw_;
+  tb    = tb_;
   stack = stack_;
 
   args = args_;

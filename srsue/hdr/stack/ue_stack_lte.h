@@ -38,6 +38,7 @@
 #include "srslte/upper/rlc.h"
 #include "upper/nas.h"
 #include "upper/usim.h"
+#include "srsue/hdr/testbench.h"
 
 #include "srslte/common/buffer_pool.h"
 #include "srslte/common/log_filter.h"
@@ -65,7 +66,7 @@ public:
   std::string get_type() final;
 
   int  init(const stack_args_t& args_, srslte::logger* logger_);
-  int  init(const stack_args_t& args_, srslte::logger* logger_, phy_interface_stack_lte* phy_, gw_interface_stack* gw_);
+  int  init(const stack_args_t& args_, srslte::logger* logger_, phy_interface_stack_lte* phy_, gw_interface_stack* gw_, testbench* tb_);
   bool switch_on() final;
   bool switch_off();
   bool enable_data();
@@ -168,6 +169,7 @@ private:
   // RAT-specific interfaces
   phy_interface_stack_lte* phy = nullptr;
   gw_interface_stack*      gw  = nullptr;
+  testbench*               tb  = nullptr;
 
   // Thread
   static const int STACK_MAIN_THREAD_PRIO = -1; // Use default high-priority below UHD

@@ -65,10 +65,12 @@ std::string ue_stack_lte::get_type()
 int ue_stack_lte::init(const stack_args_t&      args_,
                        srslte::logger*          logger_,
                        phy_interface_stack_lte* phy_,
-                       gw_interface_stack*      gw_)
+                       gw_interface_stack*      gw_,
+                       testbench*               tb_)
 {
   phy = phy_;
   gw  = gw_;
+  tb  = tb_;
 
   if (init(args_, logger_)) {
     return SRSLTE_ERROR;
@@ -128,8 +130,8 @@ int ue_stack_lte::init(const stack_args_t& args_, srslte::logger* logger_)
   mac.init(phy, &rlc, &rrc, &timers, this);
   rlc.init(&pdcp, &rrc, &timers, 0 /* RB_ID_SRB0 */);
   pdcp.init(&rlc, &rrc, gw);
-  nas.init(this, usim.get(), &rrc, gw, args.nas);
-  rrc.init(phy, &mac, &rlc, &pdcp, &nas, usim.get(), gw, &timers, this, args.rrc);
+  nas.init(this, usim.get(), &rrc, gw, tb, args.nas);
+  rrc.init(phy, &mac, &rlc, &pdcp, &nas, usim.get(), gw, &timers, tb, this, args.rrc);
 
   running = true;
   start(STACK_MAIN_THREAD_PRIO);

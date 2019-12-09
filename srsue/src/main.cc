@@ -40,6 +40,7 @@
 #include "srsue/hdr/metrics_csv.h"
 #include "srslte/common/metrics_hub.h"
 #include "srslte/version.h"
+#include "srsue/hdr/testbench.h"
 
 extern bool     simulate_rlf;
 
@@ -552,7 +553,8 @@ int main(int argc, char* argv[])
   srslte::logger_file   logger_file;
   srslte::logger_file   logger_file_results;
   srslte::log_filter    log_results;
-  
+
+  testbench tb;
 
   // Setup logging
   srslte::logger* logger = nullptr;
@@ -575,7 +577,7 @@ int main(int argc, char* argv[])
 
   // Create UE instance
   srsue::ue ue;
-  if (ue.init(args, logger)) {
+  if (ue.init(args, &tb, logger)) {
     ue.stop();
     return SRSLTE_SUCCESS;
   }
