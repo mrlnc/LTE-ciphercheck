@@ -853,8 +853,8 @@ void nas::parse_attach_accept(uint32_t lcid, unique_byte_buffer_t pdu)
   LIBLTE_MME_ATTACH_ACCEPT_MSG_STRUCT attach_accept = {};
   liblte_mme_unpack_attach_accept_msg((LIBLTE_BYTE_MSG_STRUCT*)pdu.get(), &attach_accept);
 
-/*   report_attach_result(true, LIBLTE_MME_MSG_TYPE_ATTACH_ACCEPT);
- */
+  tb->report_attach_accept();
+
   if (attach_accept.eps_attach_result == LIBLTE_MME_EPS_ATTACH_RESULT_EPS_ONLY) {
     //FIXME: Handle t3412.unit
     //FIXME: Handle tai_list
@@ -1075,8 +1075,8 @@ void nas::parse_attach_reject(uint32_t lcid, unique_byte_buffer_t pdu)
   nas_log->warning("Received Attach Reject. Cause= %02X\n", attach_rej.emm_cause);
   nas_log->console("Received Attach Reject. Cause= %02X\n", attach_rej.emm_cause);
 
-/*   report_attach_result(false, LIBLTE_MME_MSG_TYPE_ATTACH_REJECT);
- */
+  tb->report_attach_reject(attach_rej.emm_cause);
+  
   enter_emm_deregistered();
   // FIXME: Command RRC to release?
 }
@@ -1233,8 +1233,8 @@ void nas::parse_security_mode_command(uint32_t lcid, unique_byte_buffer_t pdu)
     nas_log->warning("Integrity Check error in Security Mode Command\n");
   }
 
-/*   report_attach_result(true, LIBLTE_MME_MSG_TYPE_SECURITY_MODE_COMMAND);
- */
+  tb->report_nas_security_code_command(ctxt.integ_algo, ctxt.cipher_algo);
+
   ctxt.rx_count++;
 
   // Take security context into use

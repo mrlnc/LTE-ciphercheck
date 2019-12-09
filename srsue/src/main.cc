@@ -554,8 +554,6 @@ int main(int argc, char* argv[])
   srslte::logger_file   logger_file_results;
   srslte::log_filter    log_results;
 
-  testbench tb;
-
   // Setup logging
   srslte::logger* logger = nullptr;
   if (args.log.filename == "stdout") {
@@ -571,9 +569,13 @@ int main(int argc, char* argv[])
     logger_file_results.init(args.log.results_filename, args.log.file_max_size);
     results_logger = &logger_file_results;
   }
+  
   // Init UE log
-  log_results.init("Main  ", logger);
+  log_results.init("Main  ", results_logger);
   log_results.set_level(srslte::LOG_LEVEL_INFO);
+
+  testbench tb(&log_results);
+  tb.start_testcase(0x0, 0x0); // TODO remove; this is just for testing
 
   // Create UE instance
   srsue::ue ue;
@@ -617,11 +619,15 @@ int main(int argc, char* argv[])
     exit(SRSLTE_ERROR);
   }
 
+  uint testcase_id = 0;
+
   /* eia_mask / eea_mask:
    * 0b0001 means ExA0 is enabled,
    * 0b1000 means ExA3 is enabled. */
   for (uint8_t eia_mask = 0; eia_mask <= 0b1111 && running ; eia_mask++) {
     for (uint8_t eea_mask = 0; eea_mask <= 0b1111 && running; eea_mask++) {
+      testcase_id = tb.start_testcase(eia_mask, eea_mask);
+
       ue.enable_sec_algo(EIA, 0, eia_mask & 0b0001);
       ue.enable_sec_algo(EIA, 1, eia_mask & 0b0010);
       ue.enable_sec_algo(EIA, 2, eia_mask & 0b0100);
@@ -631,21 +637,14 @@ int main(int argc, char* argv[])
       ue.enable_sec_algo(EEA, 2, eea_mask & 0b0100);
       ue.enable_sec_algo(EEA, 3, eea_mask & 0b1000);
 
-      
       cout << "Attaching UE... EIA: " << bitset<8>(eia_mask) << " EEA: " << bitset<8>(eea_mask) << endl;
       cnt = 0;
       attached = false;
       do {
         attached = ue.switch_on();
         cnt++;
-      } while (!attached && cnt <= 3 && running );
-
-      if (attached) {
-        cout << "Supported configuration: EIA: " << bitset<8>(eia_mask) << " EEA: " << bitset<8>(eea_mask) << endl;
-      } else {
-        cout << "Unsupported configuration: EIA: " << bitset<8>(eia_mask) << " EEA: " << bitset<8>(eea_mask) << endl;
-      }
-
+      } while (!tb.is_finished() && running );
+      
       if (running) {
         if (args.gui.enable) {
           ue.start_plot();
