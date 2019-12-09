@@ -1859,8 +1859,9 @@ void rrc::parse_dl_dcch(uint32_t lcid, unique_byte_buffer_t pdu)
                        .security_mode_cmd_r8()
                        .security_cfg_smc.security_algorithm_cfg.integrity_prot_algorithm.value;
 
-      rrc_log->info("Received Security Mode Command eea: %s, eia: %s\n",
-                    ciphering_algorithm_id_text[cipher_algo],
+      tb->report_rrc_security_mode_command(integ_algo, cipher_algo);
+
+      rrc_log->info("Received Security Mode Command eea: %s, eia: %s\n", ciphering_algorithm_id_text[cipher_algo],
                     integrity_algorithm_id_text[integ_algo]);
 
       // Generate AS security keys
