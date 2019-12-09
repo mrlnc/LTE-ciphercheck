@@ -50,9 +50,10 @@ ue::~ue()
   byte_buffer_pool::cleanup();
 }
 
-int ue::init(const all_args_t& args_, srslte::logger* logger_)
+int ue::init(const all_args_t& args_, srsue::testbench* tb_, srslte::logger* logger_)
 {
   int ret = SRSLTE_SUCCESS;
+  tb     = tb_;
   logger = logger_;
 
   // Init UE log
@@ -103,7 +104,7 @@ int ue::init(const all_args_t& args_, srslte::logger* logger_)
       ret = SRSLTE_ERROR;
     }
 
-    if (lte_stack->init(args.stack, logger, lte_phy.get(), gw_ptr.get())) {
+    if (lte_stack->init(args.stack, logger, lte_phy.get(), gw_ptr.get(), tb)) {
       log.console("Error initializing stack.\n");
       ret = SRSLTE_ERROR;
     }

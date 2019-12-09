@@ -39,6 +39,7 @@
 #include "srslte/interfaces/ue_interfaces.h"
 #include "srslte/radio/radio_base.h"
 #include "stack/ue_stack_base.h"
+#include "srsue/hdr/testbench.h"
 
 #include "ue_metrics_interface.h"
 
@@ -95,7 +96,7 @@ public:
   ue();
   ~ue();
 
-  int  init(const all_args_t& args_, srslte::logger* logger_);
+  int  init(const all_args_t& args_, testbench* _testbench, srslte::logger* logger_);
   void stop();
   bool switch_on();
   bool switch_off();
@@ -111,8 +112,9 @@ private:
   // UE consists of a radio, a PHY and a stack element
   std::unique_ptr<ue_phy_base>        phy;
   std::unique_ptr<srslte::radio_base> radio;
-  std::unique_ptr<ue_stack_base>      stack;
-  std::unique_ptr<gw>                 gw_inst;
+  std::unique_ptr<ue_stack_base> stack;
+  std::unique_ptr<gw>            gw_inst;
+  testbench* tb;
 
   // Generic logger members
   srslte::logger*    logger = nullptr;

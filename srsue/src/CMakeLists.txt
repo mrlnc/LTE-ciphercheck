@@ -30,7 +30,7 @@ if (RPATH)
   set(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
 endif (RPATH)
 
-add_executable(srsue main.cc ue.cc metrics_stdout.cc metrics_csv.cc)
+add_executable(srsue main.cc ue.cc testbench.cc metrics_stdout.cc metrics_csv.cc)
 target_link_libraries(srsue   srsue_phy
                               srsue_stack
                               srsue_upper
