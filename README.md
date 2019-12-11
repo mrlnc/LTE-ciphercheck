@@ -1,8 +1,9 @@
-This tool quickly tests LTE networks for their cipher support. It's for use by telecom operators only. It was presented at WiSec 2019 ([Paper](./img/wisec19-final123.pdf), [Talk](./img/WiSec19-LTE_Security_Disabled.pdf)):
+This tool quickly tests LTE networks for their cipher support. It's for use by telecom operators only.
 
+Check out our research paper and talk at WiSec 2019 ([Paper](./img/wisec19-final123.pdf), [Talk](./img/WiSec19-LTE_Security_Disabled.pdf)):
 > Merlin Chlosta, David Rupprecht, Thorsten Holz, and Christina Pöpper. 2019. LTE Security Disabled—Misconfiguration in Commercial Networks. In 12th ACM Conference on Security and Privacy in Wireless and Mobile Networks (WiSec ’19), May 15–17, 2019, Miami, FL, USA. ACM, New York, NY, USA, 6 pages. https://doi.org/10.1145/3317549.3324927
 
-This branch is a work in progress (rebasing on more recent srsLTE release). If you got questions or suggestions, drop me an email: [merlin.chlosta+eia0@rub.de](merlin.chlosta+eia0@rub.de)
+For inquiries contact me at [merlin.chlosta+eia0@rub.de](merlin.chlosta+eia0@rub.de)
 
 # Encryption in LTE Networks
 
@@ -27,6 +28,19 @@ If a network is poorly configured, man-in-the-middle attacks become trivial. If 
 The whole setup looks like this:
 
 ![Setup](./img/system_overview.png)
+
+We typically use Ettus USRP B210 as Software Defined Radio, and the smartcard readers that are built into the Dell standard keyboards.
+
+```console
+~$ sudo apt-get install git cmake libfftw3-dev libmbedtls-dev libboost-program-options-dev \
+    libconfig++-dev libsctp-dev libpcsclite-dev pcsc-tools libuhd-dev
+~$ git clone https://github.com/mrlnc/eia0.git
+~$ cd eia0
+eia0$ mkdir build && cd build
+build$ cmake ..
+build$ make -j `nproc` srsue
+```
+The binary is `eia0/build/srsue/srsue`. An example configuration file is located at `eia0/srsue/ue.conf.example`; copy it to `~/.config/srslte/ue.conf` for convenience.
 
 Basically, this software is just [srsLTE](https://github.com/srsLTE/srsLTE) with minor changes. See the [srsLTE README](https://github.com/srsLTE/srsLTE/blob/master/README.md) for detailed build instructions, and [www.srslte.com](srslte.com) for documentation, guides and project news. srsLTE is released under the AGPLv3 license and uses software from the [OpenLTE project](http://sourceforge.net/projects/openlte) for some security functions and for NAS message parsing.
 
