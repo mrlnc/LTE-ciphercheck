@@ -66,6 +66,7 @@ public:
 
   int  init(const stack_args_t& args_, srslte::logger* logger_);
   int  init(const stack_args_t& args_, srslte::logger* logger_, phy_interface_stack_lte* phy_, gw_interface_stack* gw_, testbench* tb_);
+  void enable_pcap(std::string mac_filename, std::string nas_filename);
   bool switch_on() final;
   bool switch_off();
   bool enable_data();

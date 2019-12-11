@@ -70,9 +70,12 @@ tx_gain = 80
 #####################################################################
 [pcap]
 enable = false
-filename = /tmp/ue.pcap
+# basename for MAC PCAP
+# one PCAP per testcase, so consider a dedicated directory within /tmp
+filename = /tmp/ue
 nas_enable = false
-nas_filename = /tmp/nas.pcap
+# basename for NAS PCAP
+nas_filename = /tmp/nas
 
 #####################################################################
 # Log configuration
@@ -99,6 +102,7 @@ all_level = warning
 phy_lib_level = none
 all_hex_limit = 32
 filename = /tmp/ue.log
+results_filename = /tmp/sec_results.log
 file_max_size = -1
 
 #####################################################################
