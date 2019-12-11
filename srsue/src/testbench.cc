@@ -81,8 +81,15 @@ void testbench::report_nas_security_mode_command(uint8_t _eia, uint8_t _eea)
 };
 
 /* RRC interface */
-void testbench::report_rrc(){
-
+void testbench::report_rrc_key(key_type _type, uint8_t* _k) {
+  if (testcases.find(current_testcase_id) == testcases.end()) {
+    log->error("report_rrc_key: no testcase %i available.\n", current_testcase_id);
+    return;
+  }
+  auto tc = testcases[current_testcase_id];
+  if (tc != nullptr) {
+    tc->report_rrc_key(_type, _k);
+  }
 };
 
 void testbench::report_rrc_security_mode_command(uint8_t _eia, uint8_t _eea)
@@ -152,6 +159,28 @@ void testbench::testcase::report_rrc_security_mode_command(uint8_t _eia, uint8_t
   rrc_eea                       = _eea;
   got_rrc_security_mode_command = true;
 };
+
+void testbench::testcase::report_rrc_key(key_type _type, uint8_t* _k) {
+  if (_k == nullptr) {
+    return;
+  }
+  switch (_type) {
+    case key_type::k_rrc_enc:
+      memcpy(k_rrc_enc, _k, 32);
+      log->info_hex(k_rrc_enc, 32, "RRC encryption key - k_rrc_enc");
+    break;
+    case key_type::k_rrc_int:
+      memcpy(k_rrc_int, _k, 32);
+      log->info_hex(k_rrc_int, 32, "RRC integrity key - k_rrc_int");
+    break;
+    case key_type::k_up_enc:
+      memcpy(k_up_enc, _k, 32);
+      log->info_hex(k_up_enc, 32, "UP encryption key - k_up_enc");
+    break;
+    default:
+      log->error("Error setting key, testcase %i\n", id);
+  }
+}
 
 std::string testbench::testcase::get_summary() {
     // at least Snow3G or AES are supported

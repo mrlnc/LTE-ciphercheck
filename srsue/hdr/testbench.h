@@ -6,6 +6,7 @@
 #include "srslte/common/security.h"
 #include <bitset>
 #include <map>
+#include <string>
 
 namespace srsue {
 
@@ -28,6 +29,10 @@ protected:
     uint8_t rrc_eia = 0;
     uint8_t rrc_eea = 0;
 
+    uint8_t k_rrc_enc[32] = {};
+    uint8_t k_rrc_int[32] = {};
+    uint8_t k_up_enc[32]  = {};
+
     srslte::log_filter* log;
 
     /* NAS */
@@ -41,6 +46,8 @@ protected:
   public:
     testcase(srslte::log_filter* _log, uint _id, uint8_t _eia_mask, uint8_t _eea_mask);
 
+    std::string get_summary();
+
     /* stack */
     bool is_finished();
 
@@ -51,6 +58,7 @@ protected:
     void report_nas_security_mode_command(uint8_t eia, uint8_t eea);
 
     /* RRC */
+    void report_rrc_key(key_type _type, uint8_t* _k);
     void report_rrc_security_mode_command(uint8_t _eia, uint8_t _eea);
   };
 
@@ -77,7 +85,7 @@ public:
   void report_nas_security_mode_command(uint8_t eia, uint8_t eea);
 
   /* RRC interface */
-  void report_rrc();
+  void report_rrc_key(key_type _type, uint8_t* _k);
   void report_rrc_security_mode_command(uint8_t _eia, uint8_t _eea);
 };
 
