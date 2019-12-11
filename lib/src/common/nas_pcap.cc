@@ -39,6 +39,7 @@ void nas_pcap::open(const char* filename, uint32_t ue_id_)
 void nas_pcap::close()
 {
   fprintf(stdout, "Saving NAS PCAP file (DLT=%d)\n", NAS_LTE_DLT);
+  enable_write = false;
   LTE_PCAP_Close(pcap_file);
 }
 
