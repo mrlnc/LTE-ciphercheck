@@ -48,6 +48,7 @@ typedef enum {
   AUTH_SYNCH_FAILURE
 } auth_result_t;
 
+enum class key_type { k_rrc_enc, k_rrc_int, k_up_enc };
 typedef enum { EIA, EEA } sec_algo_type_t;
 
 // Testbench interface for main/stack
@@ -73,7 +74,7 @@ public:
 class testbench_interface_rrc
 {
 public:
-  virtual void report_rrc() = 0;
+  virtual void report_rrc_key(key_type _type, uint8_t* _k) = 0;
   virtual void report_rrc_security_mode_command(uint8_t _eia, uint8_t _eea) = 0;
 };
 

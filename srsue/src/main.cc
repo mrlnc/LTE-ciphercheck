@@ -575,6 +575,8 @@ int main(int argc, char* argv[])
   // Init UE log
   log_results.init("Main  ", results_logger);
   log_results.set_level(srslte::LOG_LEVEL_INFO);
+  log_results.set_hex_limit(32);
+
 
   testbench tb(&log_results);
 

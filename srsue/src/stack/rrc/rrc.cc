@@ -2001,8 +2001,11 @@ void rrc::parse_dl_dcch(uint32_t lcid, unique_byte_buffer_t pdu)
       usim->generate_as_keys(k_asme, nas->get_k_enb_count(), k_rrc_enc, k_rrc_int, k_up_enc, k_up_int, cipher_algo,
                              integ_algo);
       rrc_log->info_hex(k_rrc_enc, 32, "RRC encryption key - k_rrc_enc");
+      tb->report_rrc_key(key_type::k_rrc_enc, k_rrc_enc);
       rrc_log->info_hex(k_rrc_int, 32, "RRC integrity key  - k_rrc_int");
+      tb->report_rrc_key(key_type::k_rrc_int, k_rrc_int);
       rrc_log->info_hex(k_up_enc, 32, "UP encryption key  - k_up_enc");
+      tb->report_rrc_key(key_type::k_up_enc, k_up_enc);
 
       security_is_activated = true;
 
