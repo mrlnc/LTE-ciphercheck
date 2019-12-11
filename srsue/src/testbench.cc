@@ -28,6 +28,10 @@ bool testbench::get_result()
 
 bool testbench::is_finished()
 {
+  if (testcases.find(current_testcase_id) == testcases.end()) {
+    log->error("is_finished: no testcase %i available.\n", current_testcase_id);
+    return false;
+  }
   auto tc = testcases[current_testcase_id];
   if (tc != nullptr) {
     return tc->is_finished();
@@ -42,6 +46,10 @@ void testbench::report_nas(){
 
 void testbench::report_attach_accept()
 {
+  if (testcases.find(current_testcase_id) == testcases.end()) {
+    log->error("report_attach_accept: no testcase %i available.\n", current_testcase_id);
+    return;
+  }
   auto tc = testcases[current_testcase_id];
   if (tc != nullptr) {
     tc->report_attach_accept();
@@ -50,6 +58,10 @@ void testbench::report_attach_accept()
 
 void testbench::report_attach_reject(uint8_t _cause)
 {
+  if (testcases.find(current_testcase_id) == testcases.end()) {
+    log->error("report_attach_reject: no testcase %i available.\n", current_testcase_id);
+    return;
+  }
   auto tc = testcases[current_testcase_id];
   if (tc != nullptr) {
     tc->report_attach_reject(_cause);
@@ -58,6 +70,10 @@ void testbench::report_attach_reject(uint8_t _cause)
 
 void testbench::report_nas_security_mode_command(uint8_t _eia, uint8_t _eea)
 {
+  if (testcases.find(current_testcase_id) == testcases.end()) {
+    log->error("report_nas_security_mode_command: no testcase %i available.\n", current_testcase_id);
+    return;
+  }
   auto tc = testcases[current_testcase_id];
   if (tc != nullptr) {
     tc->report_nas_security_mode_command(_eia, _eea);
@@ -71,6 +87,10 @@ void testbench::report_rrc(){
 
 void testbench::report_rrc_security_mode_command(uint8_t _eia, uint8_t _eea)
 {
+  if (testcases.find(current_testcase_id) == testcases.end()) {
+    log->error("report_rrc_security_mode_command: no testcase %i available.\n", current_testcase_id);
+    return;
+  }
   auto tc = testcases[current_testcase_id];
   if (tc != nullptr) {
     tc->report_rrc_security_mode_command(_eia, _eea);
@@ -132,5 +152,25 @@ void testbench::testcase::report_rrc_security_mode_command(uint8_t _eia, uint8_t
   rrc_eea                       = _eea;
   got_rrc_security_mode_command = true;
 };
+
+std::string testbench::testcase::get_summary() {
+    // at least Snow3G or AES are supported
+    bool has_secure_capabilities = ( eia_caps[1] || eia_caps[2] )
+                                && ( eea_caps[1] || eea_caps[2] );
+    bool insecure_eea_choice = ( nas_eea == 0 || rrc_eea == 0 );
+    bool insecure_eia_choice = ( nas_eia == 0 || rrc_eia == 0 );
+    
+    if (!got_nas_security_mode_command && !got_attach_reject) {
+        return std::string("Testing unsuccessful.");
+    }
+    if (got_attach_reject) {
+        if (has_secure_capabilities) {
+            return std::string("Reject despite secure configuration available");
+        } else {
+            return std::string("Reject despite secure configuration available");
+        }
+    }
+    return std::string("");
+}
 
 } // namespace srsue

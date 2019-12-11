@@ -29,6 +29,8 @@
 #include <iostream>
 #include <fstream>
 #include <string>
+#include <iomanip>
+#include <sstream>
 #include <boost/program_options.hpp>
 #include <boost/program_options/parsers.hpp>
 #include <fstream>
@@ -574,7 +576,6 @@ int main(int argc, char* argv[])
   log_results.set_level(srslte::LOG_LEVEL_INFO);
 
   testbench tb(&log_results);
-  tb.start_testcase(0x0, 0x0); // TODO remove; this is just for testing
 
   // Create UE instance
   srsue::ue ue;
@@ -599,6 +600,12 @@ int main(int argc, char* argv[])
 
   pthread_t input;
   pthread_create(&input, nullptr, &input_loop, &args);
+
+  std::string mac_pcap_filename = "/tmp/ue_connection_test.pcap";
+  std::string nas_pcap_filename = "/tmp/nas_connection_test.pcap";
+
+  tb.start_testcase(0x0, 0x0); // TODO remove; this is just for testing
+  ue.enable_pcap(mac_pcap_filename, nas_pcap_filename);
 
   uint cnt      = 0;
   bool attached = false;
@@ -629,8 +636,6 @@ int main(int argc, char* argv[])
    * 0b1000 means ExA3 is enabled. */
   for (uint8_t eia_mask = 0; eia_mask <= 0b1111 && running ; eia_mask++) {
     for (uint8_t eea_mask = 0; eea_mask <= 0b1111 && running; eea_mask++) {
-      testcase_id = tb.start_testcase(eia_mask, eea_mask);
-
       ue.enable_sec_algo(EIA, 0, eia_mask & 0b0001);
       ue.enable_sec_algo(EIA, 1, eia_mask & 0b0010);
       ue.enable_sec_algo(EIA, 2, eia_mask & 0b0100);
@@ -644,23 +649,27 @@ int main(int argc, char* argv[])
       cnt = 0;
       attached = false;
       do {
-        attached = ue.switch_on();
-        cnt++;
-      } while (!tb.is_finished() && running );
-      
-      if (running) {
-        if (args.gui.enable) {
-          ue.start_plot();
-        }
-      }
+        std::stringstream ss1, ss2;
+        ss1 << args.stack.pcap.filename << "_ID_" << std::setfill('0') << std::setw(4) << testcase_id << "_EIA_" << bitset<8>(eia_mask) << "_EEA_" << bitset<8>(eea_mask) << "_try_" << cnt << ".pcap";
+        mac_pcap_filename = ss1.str();
+        ss2 << args.stack.pcap.nas_filename << "_ID_" << std::setfill('0') << std::setw(4) << testcase_id << "_EIA_" << bitset<8>(eia_mask) << "_EEA_" << bitset<8>(eea_mask) << "_try_" << cnt << ".pcap";
+        nas_pcap_filename = ss2.str();
 
-      cout << "Detaching UE..." << endl;
-      cnt = 0;
-      bool detached = false;
-      do {
-        detached = ue.switch_off();
+        ue.enable_pcap(mac_pcap_filename, nas_pcap_filename);
+        testcase_id = tb.start_testcase(eia_mask, eea_mask);
+
+        attached = ue.switch_on();
+
+        uint timeout_ms = 1000;
+        uint i_ms = 0;
+        while (!tb.is_finished()  && i_ms < timeout_ms && running ) {
+          usleep(1000);
+          i_ms += 1;
+        };
+
+        bool detached = ue.switch_off();
         cnt++;
-      } while (running && !detached && cnt <= 2);
+      } while (!tb.is_finished() && running && cnt <= 4);
     }
   }
 

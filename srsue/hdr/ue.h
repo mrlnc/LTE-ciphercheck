@@ -102,6 +102,8 @@ public:
   bool switch_off();
   void start_plot();
   void enable_sec_algo(sec_algo_type_t type, uint index, bool enable);
+  void enable_pcap(std::string mac_filename, std::string nas_filename);
+
 
   // UE metrics interface
   bool get_metrics(ue_metrics_t* m);

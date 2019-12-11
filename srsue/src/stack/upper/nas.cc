@@ -481,7 +481,7 @@ bool nas::paging(s_tmsi_t* ue_identity)
 
 void nas::enable_sec_algo(sec_algo_type_t type, uint index, bool enable)
 {
-  if (index > 3) {
+  if (index > 7) {
     nas_log->error("Security Algorithm %s%u is invalid\n", type == EIA ? "EIA" : "EEA", index);
     return;
   }

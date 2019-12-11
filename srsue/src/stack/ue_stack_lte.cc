@@ -175,6 +175,19 @@ void ue_stack_lte::stop_impl()
   }
 }
 
+void ue_stack_lte::enable_pcap(std::string mac_filename, std::string nas_filename) {
+  if (args.pcap.enable) {
+    mac_pcap.close();
+    mac_pcap.open(mac_filename.c_str());
+    mac.start_pcap(&mac_pcap);
+  }
+  if (args.pcap.nas_enable) {
+    nas_pcap.close();
+    nas_pcap.open(nas_filename.c_str());
+    nas.start_pcap(&nas_pcap);
+  }
+}
+
 bool ue_stack_lte::switch_on()
 {
   if (running) {
