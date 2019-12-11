@@ -40,9 +40,37 @@ eia0$ mkdir build && cd build
 build$ cmake ..
 build$ make -j `nproc` srsue
 ```
-The binary is `eia0/build/srsue/srsue`. An example configuration file is located at `eia0/srsue/ue.conf.example`; copy it to `~/.config/srslte/ue.conf` for convenience.
+The binary is `eia0/build/srsue/srsue`.
 
 Basically, this software is just [srsLTE](https://github.com/srsLTE/srsLTE) with minor changes. See the [srsLTE README](https://github.com/srsLTE/srsLTE/blob/master/README.md) for detailed build instructions, and [www.srslte.com](srslte.com) for documentation, guides and project news. srsLTE is released under the AGPLv3 license and uses software from the [OpenLTE project](http://sourceforge.net/projects/openlte) for some security functions and for NAS message parsing.
+
+## Configuration
+
+An example configuration file is located at `eia0/srsue/ue.conf.example`; copy it to `~/.config/srslte/ue.conf` for convenience. Configure the cell's frequency:
+```
+[rf]
+dl_earfcn = 3400
+```
+
+The test run will create a PCAP for each testcase -- about 600 files. So consider creating custom directory `/tmp/sec_results/` and point the PCAPs there:
+```
+[pcap]
+enable = true
+filename = /tmp/sec_results/ue
+nas_enable = true
+nas_filename = /tmp/sec_results/nas
+```
+That will result in files like `/tmp/sec_results/ue_ID_0451_EIA_00001100_EEA_00000010_try_0.pcap`. Last, configure the USIM:
+```
+[usim]
+mode = pcsc
+#algo = xor
+#opc  = 63BFA50EE6523365FF14C1F45F88737D
+#k    = 00112233445566778899aabbccddeeff
+#imsi = 001010123456789
+imei = 353490069873319
+```
+Fill in an IMEI of one of your devices. The other parameters are read from the SIM card.
 
 # Testing Procedure
 
