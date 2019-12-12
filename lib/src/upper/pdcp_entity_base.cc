@@ -72,6 +72,9 @@ void pdcp_entity_base::integrity_generate(uint8_t* msg, uint32_t msg_len, uint32
 
   switch (integ_algo) {
     case INTEGRITY_ALGORITHM_ID_EIA0:
+      for (int i = 0; i < 4; i++) {
+        mac[i] = 0x0;
+      }
       break;
     case INTEGRITY_ALGORITHM_ID_128_EIA1:
       security_128_eia1(&k_int[16], count, cfg.bearer_id - 1, cfg.tx_direction, msg, msg_len, mac);
@@ -83,6 +86,9 @@ void pdcp_entity_base::integrity_generate(uint8_t* msg, uint32_t msg_len, uint32
       security_128_eia3(&k_int[16], count, cfg.bearer_id - 1, cfg.tx_direction, msg, msg_len, mac);
       break;
     default:
+      for (int i = 0; i < 4; i++) {
+        mac[i] = 0x0;
+      }
       break;
   }
 
@@ -129,7 +135,9 @@ bool pdcp_entity_base::integrity_verify(uint8_t* msg, uint32_t msg_len, uint32_t
              cfg.rx_direction == SECURITY_DIRECTION_DOWNLINK ? "Downlink" : "Uplink");
   log->debug_hex(msg, msg_len, "Integrity check input msg:");
 
-  if (integ_algo != INTEGRITY_ALGORITHM_ID_EIA0) {
+  if (integ_algo == INTEGRITY_ALGORITHM_ID_EIA0 && integ_algo > INTEGRITY_ALGORITHM_ID_128_EIA3) {
+    is_valid = true;
+  } else {
     for (uint8_t i = 0; i < 4; i++) {
       if (mac[i] != mac_exp[i]) {
         log->error_hex(mac_exp, 4, "MAC mismatch (expected)");
