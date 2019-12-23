@@ -651,6 +651,8 @@ int main(int argc, char* argv[])
       cnt = 0;
       attached = false;
       do {
+        testcase_id = tb.start_testcase(eia_mask, eea_mask);
+
         std::stringstream ss1, ss2;
         ss1 << args.stack.pcap.filename << "_ID_" << std::setfill('0') << std::setw(4) << testcase_id << "_EIA_" << bitset<8>(eia_mask) << "_EEA_" << bitset<8>(eea_mask) << "_try_" << cnt << ".pcap";
         mac_pcap_filename = ss1.str();
@@ -658,7 +660,6 @@ int main(int argc, char* argv[])
         nas_pcap_filename = ss2.str();
 
         ue.enable_pcap(mac_pcap_filename, nas_pcap_filename);
-        testcase_id = tb.start_testcase(eia_mask, eea_mask);
 
         attached = ue.switch_on();
 
@@ -672,6 +673,13 @@ int main(int argc, char* argv[])
         bool detached = ue.switch_off();
         cnt++;
       } while (!tb.is_finished() && running && cnt <= 4);
+      if (!tb.is_finished()) {
+        cout << "No result after %i tries, aborting testcase EIA: " << bitset<8>(eia_mask)
+             << " EEA: " << bitset<8>(eea_mask) << endl;
+        log_results.error("No result after %i tries, aborting. Check manually! EIA: %s EEA: %s\n", cnt,
+                          bitset<8>(eia_mask).to_string().c_str(),
+                          bitset<8>(eea_mask).to_string().c_str());
+      }
     }
   }
 
