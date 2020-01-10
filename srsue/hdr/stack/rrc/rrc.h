@@ -296,7 +296,7 @@ public:
             nas_interface_rrc*     nas_,
             usim_interface_rrc*    usim_,
             gw_interface_rrc*      gw_,
-            srslte::timers*        timers_,
+            srslte::timer_handler* timers_,
             testbench_interface_rrc* tb_,
             stack_interface_rrc*   stack_,
             const rrc_args_t&      args_);
