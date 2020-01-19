@@ -603,10 +603,14 @@ int main(int argc, char* argv[])
   pthread_t input;
   pthread_create(&input, nullptr, &input_loop, &args);
 
-  std::string mac_pcap_filename = "/tmp/ue_connection_test.pcap";
-  std::string nas_pcap_filename = "/tmp/nas_connection_test.pcap";
+  std::stringstream ss1, ss2;
+  std::string mac_pcap_filename, nas_pcap_filename;
+  ss1 << args.stack.pcap.filename << "_connection_test.pcap";
+  mac_pcap_filename = ss1.str();
+  ss2 << args.stack.pcap.filename << "_connection_test.pcap";
+  nas_pcap_filename = ss2.str();
 
-  tb.start_testcase(0x0, 0x0); // TODO remove; this is just for testing
+  tb.start_testcase(0x0, 0x0);
   ue.enable_pcap(mac_pcap_filename, nas_pcap_filename);
 
   uint cnt      = 0;
@@ -616,7 +620,7 @@ int main(int argc, char* argv[])
     attached = ue.switch_on();
     cnt++;
   } while (!attached && cnt <= 3 && running);
-  if (!attached) {
+  if (!attached || !tb.is_finished()) {
     cout << "Could not attach to the network. Check configuration.\n" << endl;
 
     pthread_cancel(input);
@@ -674,7 +678,7 @@ int main(int argc, char* argv[])
         cnt++;
       } while (!tb.is_finished() && running && cnt <= 4);
       if (!tb.is_finished()) {
-        cout << "No result after %i tries, aborting testcase EIA: " << bitset<8>(eia_mask)
+        cout << "No result after " << cnt << " tries, aborting testcase EIA: " << bitset<8>(eia_mask)
              << " EEA: " << bitset<8>(eea_mask) << endl;
         log_results.error("No result after %i tries, aborting. Check manually! EIA: %s EEA: %s\n", cnt,
                           bitset<8>(eia_mask).to_string().c_str(),
@@ -683,7 +687,6 @@ int main(int argc, char* argv[])
     }
   }
 
-  //ue.switch_off();
   pthread_cancel(input);
   pthread_join(input, nullptr);
   metricshub.stop();

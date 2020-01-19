@@ -48,6 +48,9 @@ protected:
 
     std::string get_summary();
 
+    /* helpers */
+    std::string mme_cause_str(uint cause);
+
     /* stack */
     bool is_finished();
 

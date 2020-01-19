@@ -10,6 +10,7 @@ testbench::~testbench()
   }
 }
 
+
 uint testbench::start_testcase(uint8_t _eia_mask, uint8_t _eea_mask)
 {
   current_testcase_id += 1;
@@ -128,6 +129,49 @@ bool testbench::testcase::is_finished()
   return got_attach_accept || got_attach_reject;
 }
 
+
+std::string testbench::testcase::mme_cause_str(uint cause) {
+  std::map<uint, std::string> mme_causes;
+  mme_causes[0x02] = "MME_EMM_CAUSE_IMSI_UNKNOWN_IN_HSS";
+  mme_causes[0x03] = "MME_EMM_CAUSE_ILLEGAL_UE";
+  mme_causes[0x05] = "MME_EMM_CAUSE_IMEI_NOT_ACCEPTED";
+  mme_causes[0x06] = "MME_EMM_CAUSE_ILLEGAL_ME";
+  mme_causes[0x07] = "MME_EMM_CAUSE_EPS_SERVICES_NOT_ALLOWED";
+  mme_causes[0x08] = "MME_EMM_CAUSE_EPS_SERVICES_AND_NON_EPS_SERVICES_NOT_ALLOWED";
+  mme_causes[0x09] = "MME_EMM_CAUSE_UE_IDENTITY_CANNOT_BE_DERIVED_BY_THE_NETWORK";
+  mme_causes[0x0A] = "MME_EMM_CAUSE_IMPLICITLY_DETACHED";
+  mme_causes[0x0B] = "MME_EMM_CAUSE_PLMN_NOT_ALLOWED";
+  mme_causes[0x0C] = "MME_EMM_CAUSE_TRACKING_AREA_NOT_ALLOWED";
+  mme_causes[0x0D] = "MME_EMM_CAUSE_ROAMING_NOT_ALLOWED_IN_THIS_TRACKING_AREA";
+  mme_causes[0x0E] = "MME_EMM_CAUSE_EPS_SERVICES_NOT_ALLOWED_IN_THIS_PLMN";
+  mme_causes[0x0F] = "MME_EMM_CAUSE_NO_SUITABLE_CELLS_IN_TRACKING_AREA";
+  mme_causes[0x10] = "MME_EMM_CAUSE_MSC_TEMPORARILY_NOT_REACHABLE";
+  mme_causes[0x11] = "MME_EMM_CAUSE_NETWORK_FAILURE";
+  mme_causes[0x12] = "MME_EMM_CAUSE_CS_DOMAIN_NOT_AVAILABLE";
+  mme_causes[0x13] = "MME_EMM_CAUSE_ESM_FAILURE";
+  mme_causes[0x14] = "MME_EMM_CAUSE_MAC_FAILURE";
+  mme_causes[0x15] = "MME_EMM_CAUSE_SYNCH_FAILURE";
+  mme_causes[0x16] = "MME_EMM_CAUSE_CONGESTION";
+  mme_causes[0x17] = "MME_EMM_CAUSE_UE_SECURITY_CAPABILITIES_MISMATCH";
+  mme_causes[0x18] = "MME_EMM_CAUSE_SECURITY_MODE_REJECTED_UNSPECIFIED";
+  mme_causes[0x19] = "MME_EMM_CAUSE_NOT_AUTHORIZED_FOR_THIS_CSG";
+  mme_causes[0x1A] = "MME_EMM_CAUSE_NON_EPS_AUTHENTICATION_UNACCEPTABLE";
+  mme_causes[0x27] = "MME_EMM_CAUSE_CS_SERVICE_TEMPORARILY_NOT_AVAILABLE";
+  mme_causes[0x28] = "MME_EMM_CAUSE_NO_EPS_BEARER_CONTEXT_ACTIVATED";
+  mme_causes[0x5F] = "MME_EMM_CAUSE_SEMANTICALLY_INCORRECT_MESSAGE";
+  mme_causes[0x60] = "MME_EMM_CAUSE_INVALID_MANDATORY_INFORMATION";
+  mme_causes[0x61] = "MME_EMM_CAUSE_MESSAGE_TYPE_NON_EXISTENT_OR_NOT_IMPLEMENTED";
+  mme_causes[0x62] = "MME_EMM_CAUSE_MESSAGE_TYPE_NOT_COMPATIBLE_WITH_THE_PROTOCOL_STATE";
+  mme_causes[0x63] = "MME_EMM_CAUSE_INFORMATION_ELEMENT_NON_EXISTENT_OR_NOT_IMPLEMENTED";
+  mme_causes[0x64] = "MME_EMM_CAUSE_CONDITIONAL_IE_ERROR";
+  mme_causes[0x65] = "MME_EMM_CAUSE_MESSAGE_NOT_COMPATIBLE_WITH_THE_PROTOCOL_STATE";
+  mme_causes[0x6F] = "MME_EMM_CAUSE_PROTOCOL_ERROR_UNSPECIFIED";
+  if (mme_causes.find(cause) != mme_causes.end()) {
+    return mme_causes.at(cause);
+  }
+  return "error";
+}
+
 void testbench::testcase::report_nas(){};
 void testbench::testcase::report_attach_accept()
 {
@@ -136,7 +180,7 @@ void testbench::testcase::report_attach_accept()
 };
 void testbench::testcase::report_attach_reject(uint8_t _cause)
 {
-  log->info("Testcase %u got Attach Reject, cause: %u\n", id, _cause);
+  log->info("Testcase %u got Attach Reject, cause: %s\n", id, mme_cause_str(_cause).c_str());
   got_attach_reject = true;
 };
 void testbench::testcase::report_nas_security_mode_command(uint8_t _eia, uint8_t _eea)
