@@ -1,5 +1,7 @@
 This tool quickly tests LTE networks for their cipher support. It's for use by telecom operators only.
 
+## LTE Security Disabled—Misconfiguration in Commercial Networks.
+
 Check out our research paper and talk at WiSec 2019 ([Paper](./img/wisec19-final123.pdf), [Talk](./img/WiSec19-LTE_Security_Disabled.pdf)):
 > Merlin Chlosta, David Rupprecht, Thorsten Holz, and Christina Pöpper. 2019. LTE Security Disabled—Misconfiguration in Commercial Networks. In 12th ACM Conference on Security and Privacy in Wireless and Mobile Networks (WiSec ’19), May 15–17, 2019, Miami, FL, USA. ACM, New York, NY, USA, 6 pages. https://doi.org/10.1145/3317549.3324927
 
@@ -31,22 +33,32 @@ The whole setup looks like this:
 
 We typically use Ettus USRP B210 as Software Defined Radio, and the smartcard readers that are built into the Dell standard keyboards.
 
+First, build the docker image:
 ```console
-~$ sudo apt-get install git cmake libfftw3-dev libmbedtls-dev libboost-program-options-dev \
-    libconfig++-dev libsctp-dev libpcsclite-dev pcsc-tools libuhd-dev
-~$ git clone https://github.com/mrlnc/eia0.git
-~$ cd eia0
-eia0$ mkdir build && cd build
-build$ cmake ..
-build$ make -j `nproc` srsue
+host:~$ git clone https://github.com/mrlnc/eia0.git
+host:~$ cd eia0
+host:eia0$ docker build -t sec_algo_test .
 ```
-The binary is `eia0/build/srsue/srsue`.
+
+Run tests with the `start_test.sh` script, that feeds the required parameters to the docker image.
+
+```
+host:eia0$ ./start-test.sh --dl-earfcn 123 --apn internet --imei <IMEI of your smartphone>
+```
+
+## Advanced Configuration
 
 Basically, this software is just [srsLTE](https://github.com/srsLTE/srsLTE) with minor changes. See the [srsLTE README](https://github.com/srsLTE/srsLTE/blob/master/README.md) for detailed build instructions, and [www.srslte.com](srslte.com) for documentation, guides and project news. srsLTE is released under the AGPLv3 license and uses software from the [OpenLTE project](http://sourceforge.net/projects/openlte) for some security functions and for NAS message parsing.
 
 ## Configuration
 
-An example configuration file is located at `eia0/srsue/ue.conf.example`; copy it to `~/.config/srslte/ue.conf` for convenience. Configure the cell's frequency:
+An example configuration file is located at `eia0/srsue/ue.conf.example`; copy it to `~/.config/srslte/ue.conf` for convenience.
+```console
+host:eia0$ mkdir ~/.config/srslte
+host:eia0$ cp srsue/ue.conf.example ~/.config/srslte/ue.conf
+```
+
+Configure the cell's frequency:
 ```
 [rf]
 dl_earfcn = 3400
