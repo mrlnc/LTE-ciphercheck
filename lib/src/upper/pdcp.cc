@@ -256,6 +256,14 @@ bool pdcp::get_bearer_status(uint32_t lcid, uint16_t* dlsn, uint16_t* dlhfn, uin
   return true;
 }
 
+void pdcp::resubmit_last_pdu(uint32_t lcid)
+{
+  if (not valid_lcid(lcid)) {
+    return;
+  }
+  pdcp_array[lcid]->resubmit_last_pdu();
+}
+
 /*******************************************************************************
   RLC interface
 *******************************************************************************/

@@ -21,6 +21,7 @@
 
 #include "srslte/upper/pdcp_entity_lte.h"
 #include "srslte/common/security.h"
+#include "srslte/common/buffer_pool.h"
 
 namespace srslte {
 
@@ -47,6 +48,8 @@ void pdcp_entity_lte::init(uint32_t lcid_, pdcp_config_t cfg_)
   rx_count      = 0;
   do_integrity  = false;
   do_encryption = false;
+
+  last_pdu = allocate_unique_buffer(*byte_buffer_pool::get_instance());
 
   if (is_srb()) {
     reordering_window = 0;
@@ -164,6 +167,14 @@ void pdcp_entity_lte::write_pdu(unique_byte_buffer_t pdu)
   } else {
     // Handle SRB messages
     if (is_srb()) {
+
+      last_pdu = allocate_unique_buffer(*byte_buffer_pool::get_instance());
+      last_pdu->clear();
+      last_pdu->N_bytes = pdu->N_bytes;
+      memcpy(last_pdu->msg, pdu->msg, pdu->N_bytes);
+
+      log->info_hex(last_pdu->msg, last_pdu->N_bytes, "Saving %s PDU", rrc->get_rb_name(lcid).c_str());
+
       uint32_t sn = *pdu->msg & 0x1F;
       if (do_encryption) {
         cipher_decrypt(
@@ -186,6 +197,33 @@ void pdcp_entity_lte::write_pdu(unique_byte_buffer_t pdu)
   }
 exit:
   rx_count++;
+}
+
+void pdcp_entity_lte::resubmit_last_pdu()
+{
+  log->info("Re-submitting last PDU to RRC.\n");
+  log->info_hex(last_pdu->msg, last_pdu->N_bytes, "Re-submitting %s PDU (encrypted)", rrc->get_rb_name(lcid).c_str());
+
+  uint32_t sn = *last_pdu->msg & 0x1F;
+  if (do_encryption) {
+    cipher_decrypt(&last_pdu->msg[cfg.hdr_len_bytes],
+                   last_pdu->N_bytes - cfg.hdr_len_bytes,
+                   sn,
+                   &(last_pdu->msg[cfg.hdr_len_bytes]));
+    log->info_hex(last_pdu->msg, last_pdu->N_bytes, "Re-submitting %s PDU (decrypted)", rrc->get_rb_name(lcid).c_str());
+  }
+
+  if (do_integrity) {
+    if (not integrity_verify(last_pdu->msg, last_pdu->N_bytes - 4, sn, &(last_pdu->msg[last_pdu->N_bytes - 4]))) {
+      log->error_hex(last_pdu->msg, last_pdu->N_bytes, "%s Dropping PDU", rrc->get_rb_name(lcid).c_str());
+      return;
+    }
+  }
+
+  pdcp_unpack_control_pdu(last_pdu.get(), &sn);
+  log->info_hex(last_pdu->msg, last_pdu->N_bytes, "Re-submitting %s PDU SN: %d", rrc->get_rb_name(lcid).c_str(), sn);
+  // pass to RRC
+  rrc->write_pdu(lcid, std::move(last_pdu));
 }
 
 /****************************************************************************

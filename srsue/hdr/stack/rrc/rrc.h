@@ -352,6 +352,7 @@ public:
   void write_pdu_bcch_dlsch(srslte::unique_byte_buffer_t pdu);
   void write_pdu_pcch(srslte::unique_byte_buffer_t pdu);
   void write_pdu_mch(uint32_t lcid, srslte::unique_byte_buffer_t pdu);
+  bool pending_pdu_processed();
 
   // STACK interface
   void cell_search_completed(const phy_interface_rrc_lte::cell_search_ret_t& cs_ret,

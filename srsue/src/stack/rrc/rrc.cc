@@ -1885,6 +1885,8 @@ void rrc::parse_dl_dcch(uint32_t lcid, unique_byte_buffer_t pdu)
       pdcp->enable_integrity(lcid);
       send_security_mode_complete();
       pdcp->enable_encryption(lcid);
+
+      pdcp->resubmit_last_pdu(lcid);
       break;
     case dl_dcch_msg_type_c::c1_c_::types::rrc_conn_recfg:
       transaction_id = c1->rrc_conn_recfg().rrc_transaction_id;
