@@ -607,10 +607,14 @@ int main(int argc, char* argv[])
   std::string mac_pcap_filename, nas_pcap_filename;
   ss1 << args.stack.pcap.filename << "_connection_test.pcap";
   mac_pcap_filename = ss1.str();
-  ss2 << args.stack.pcap.filename << "_connection_test.pcap";
+  ss2 << args.stack.pcap.nas_filename << "_connection_test.pcap";
   nas_pcap_filename = ss2.str();
 
-  tb.start_testcase(0x0, 0x0);
+  for (uint i = 0; i < 4; i++) {
+    ue.enable_sec_algo(EIA, i, true);
+    ue.enable_sec_algo(EEA, i, true);
+  }
+  tb.start_testcase(0xff, 0xff);
   ue.enable_pcap(mac_pcap_filename, nas_pcap_filename);
 
   uint cnt      = 0;
@@ -618,6 +622,7 @@ int main(int argc, char* argv[])
   /* check if we can enter the network with basic settings */
   do {
     attached = ue.switch_on();
+    sleep(1);
     cnt++;
   } while (!attached && cnt <= 3 && running);
   if (!attached || !tb.is_finished()) {
