@@ -1850,6 +1850,14 @@ void rrc::parse_dl_dcch(uint32_t lcid, unique_byte_buffer_t pdu)
     case dl_dcch_msg_type_c::c1_c_::types::security_mode_cmd:
       transaction_id = c1->security_mode_cmd().rrc_transaction_id;
 
+      rrc_log->error("Security Mode Command: %s\n", c1->security_mode_cmd().crit_exts.c1().type().to_string().c_str());
+
+      if (c1->security_mode_cmd().crit_exts.c1().type() !=
+          security_mode_cmd_s::crit_exts_c_::c1_c_::types::security_mode_cmd_r8) {
+        rrc_log->error("We do not handle non-r8 security mode commands\n");
+        return;
+      }
+
       cipher_algo = (CIPHERING_ALGORITHM_ID_ENUM)c1->security_mode_cmd()
                         .crit_exts.c1()
                         .security_mode_cmd_r8()

@@ -1227,7 +1227,11 @@ void nas::parse_security_mode_command(uint32_t lcid, unique_byte_buffer_t pdu)
   LIBLTE_MME_SECURITY_MODE_COMPLETE_MSG_STRUCT sec_mode_comp;
   bzero(&sec_mode_comp, sizeof(LIBLTE_MME_SECURITY_MODE_COMPLETE_MSG_STRUCT));
 
-  liblte_mme_unpack_security_mode_command_msg((LIBLTE_BYTE_MSG_STRUCT*)pdu.get(), &sec_mode_cmd);
+  LIBLTE_ERROR_ENUM ret = liblte_mme_unpack_security_mode_command_msg((LIBLTE_BYTE_MSG_STRUCT*)pdu.get(), &sec_mode_cmd);
+  if (ret != LIBLTE_SUCCESS) {
+    nas_log->error("Error decoding Security Mode Command\n");
+    return;
+  }
   nas_log->info("Received Security Mode Command ksi: %d, eea: %s, eia: %s\n",
                 sec_mode_cmd.nas_ksi.nas_ksi,
                 ciphering_algorithm_id_text[sec_mode_cmd.selected_nas_sec_algs.type_of_eea],
