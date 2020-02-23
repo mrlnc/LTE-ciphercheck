@@ -25,7 +25,7 @@ RUN /usr/lib/uhd/utils/uhd_images_downloader.py
 # start pcscd for SIM reader access
 RUN    echo "#!/bin/bash" >> /etc/startup.sh \
     && echo "pcscd" >> /etc/startup.sh \
-    && echo "/srsLTE_sec-algo-test/build/srsue/src/srsue" >> /etc/startup.sh \
+    && echo "/srsLTE_sec-algo-test/build/srsue/src/srsue --fast-test true" >> /etc/startup.sh \
     && chmod u+x /etc/startup.sh
 
 ENTRYPOINT ["/etc/startup.sh"]
