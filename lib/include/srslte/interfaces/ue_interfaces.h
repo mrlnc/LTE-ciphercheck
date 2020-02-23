@@ -53,6 +53,7 @@ class testbench_interface_stack
 public:
   virtual bool get_result()                                         = 0;
   virtual bool is_finished()                                        = 0;
+  virtual bool is_connected()                                       = 0;
   virtual uint start_testcase(uint8_t _eia_mask, uint8_t _eea_mask) = 0;
 };
 

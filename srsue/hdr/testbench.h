@@ -53,6 +53,7 @@ protected:
 
     /* stack */
     bool is_finished();
+    bool is_connected();
 
     /* NAS */
     void report_nas();
@@ -80,6 +81,7 @@ public:
   /* stack / main() interface */
   bool get_result();
   bool is_finished();
+  bool is_connected();
 
   /* NAS interface */
   void report_nas();

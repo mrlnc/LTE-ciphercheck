@@ -40,6 +40,19 @@ bool testbench::is_finished()
   return false;
 }
 
+bool testbench::is_connected()
+{
+  if (testcases.find(current_testcase_id) == testcases.end()) {
+    log->error("is_connected: no testcase %i available.\n", current_testcase_id);
+    return false;
+  }
+  auto tc = testcases[current_testcase_id];
+  if (tc != nullptr) {
+    return tc->is_connected();
+  }
+  return false;
+}
+
 /* NAS interface */
 void testbench::report_nas(){
 
@@ -129,7 +142,10 @@ bool testbench::testcase::is_finished()
   return got_attach_accept || got_attach_reject;
 }
 
-
+bool testbench::testcase::is_connected()
+{
+  return got_attach_accept && got_nas_security_mode_command && got_rrc_security_mode_command;
+}
 std::string testbench::testcase::mme_cause_str(uint cause) {
   std::map<uint, std::string> mme_causes;
   mme_causes[0x02] = "MME_EMM_CAUSE_IMSI_UNKNOWN_IN_HSS";

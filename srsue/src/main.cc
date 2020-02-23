@@ -26,15 +26,12 @@
 #include <unistd.h>
 
 #include <bitset>
-#include <iostream>
-#include <fstream>
-#include <string>
-#include <iomanip>
-#include <sstream>
 #include <boost/program_options.hpp>
 #include <boost/program_options/parsers.hpp>
 #include <fstream>
+#include <iomanip>
 #include <iostream>
+#include <sstream>
 #include <string>
 
 #include "srslte/common/config_file.h"
@@ -44,8 +41,8 @@
 #include "srslte/version.h"
 #include "srsue/hdr/metrics_csv.h"
 #include "srsue/hdr/metrics_stdout.h"
-#include "srsue/hdr/ue.h"
 #include "srsue/hdr/testbench.h"
+#include "srsue/hdr/ue.h"
 
 extern bool simulate_rlf;
 
@@ -66,6 +63,7 @@ static metrics_stdout* metrics_screen = nullptr;
  *  Program arguments processing
  ***********************************************************************/
 string config_file;
+bool   fast_test;
 
 static int parse_args(all_args_t* args, int argc, char* argv[])
 {
@@ -123,6 +121,7 @@ static int parse_args(all_args_t* args, int argc, char* argv[])
     ("pcap.nas_filename", bpo::value<string>(&args->stack.pcap.nas_filename)->default_value("ue_nas.pcap"), "NAS layer capture filename (useful when NAS encryption is enabled)")
     
     ("gui.enable", bpo::value<bool>(&args->gui.enable)->default_value(false), "Enable GUI plots")
+    ("fast-test", bpo::value<bool>(&fast_test)->default_value(false), "Fast tests; skip those with AES or Snow3G")
 
     ("log.rf_level", bpo::value<string>(&args->rf.log_level)->default_value("error"), "RF log level")
     ("log.phy_level", bpo::value<string>(&args->phy.log.phy_level), "PHY log level")
@@ -538,6 +537,60 @@ static void* input_loop(void*)
   return nullptr;
 }
 
+/* check if we can still connect with valid parameters. */
+void test_connection(srsue::ue* ue, testbench* tb, all_args_t args)
+{
+  // enable all algorithms
+  for (uint i = 0; i < 4; i++) {
+    ue->enable_sec_algo(EIA, i, true);
+    ue->enable_sec_algo(EEA, i, true);
+  }
+
+  // set the testcase for logging
+  tb->start_testcase(0xff, 0xff);
+
+  std::string mac_pcap_filename, nas_pcap_filename;
+  {
+    std::stringstream ss;
+    ss << args.stack.pcap.filename << "_conn_test.pcap";
+    mac_pcap_filename = ss.str();
+  }
+  {
+    std::stringstream ss;
+    ss << args.stack.pcap.nas_filename << "_conn_test.pcap";
+    nas_pcap_filename = ss.str();
+  }
+
+  ue->enable_pcap(mac_pcap_filename, nas_pcap_filename);
+
+  for (uint cnt = 0; cnt < 3; cnt++) {
+    ue->switch_on();
+
+    uint timeout_ms = 3000;
+    uint i_ms       = 0;
+    while (!tb->is_connected() && i_ms < timeout_ms && running) {
+      usleep(1000);
+      i_ms += 1;
+    };
+
+    ue->switch_off();
+    sleep(1);
+
+    if (tb->is_connected()) {
+      // connection successful
+      return;
+    } else {
+      cout << "Could not connect with valid config. Trying another time." << endl;
+    }
+  }
+  // connection failed
+
+  cout << "Could not attach to the network with all algorithms enabled. Check configuration.\n" << endl;
+  ue->stop();
+  cout << "---  exiting  ---" << endl;
+  exit(SRSLTE_ERROR);
+}
+
 int main(int argc, char* argv[])
 {
   signal(SIGINT, sig_int_handler);
@@ -570,12 +623,11 @@ int main(int argc, char* argv[])
     logger_file_results.init(args.log.results_filename, args.log.file_max_size);
     results_logger = &logger_file_results;
   }
-  
+
   // Init UE log
   log_results.init("Main  ", results_logger);
   log_results.set_level(srslte::LOG_LEVEL_INFO);
   log_results.set_hex_limit(32);
-
 
   testbench tb(&log_results);
 
@@ -603,50 +655,24 @@ int main(int argc, char* argv[])
   pthread_t input;
   pthread_create(&input, nullptr, &input_loop, &args);
 
-  std::stringstream ss1, ss2;
-  std::string mac_pcap_filename, nas_pcap_filename;
-  ss1 << args.stack.pcap.filename << "_connection_test.pcap";
-  mac_pcap_filename = ss1.str();
-  ss2 << args.stack.pcap.nas_filename << "_connection_test.pcap";
-  nas_pcap_filename = ss2.str();
-
-  for (uint i = 0; i < 4; i++) {
-    ue.enable_sec_algo(EIA, i, true);
-    ue.enable_sec_algo(EEA, i, true);
-  }
-  tb.start_testcase(0xff, 0xff);
-  ue.enable_pcap(mac_pcap_filename, nas_pcap_filename);
-
-  uint cnt      = 0;
-  bool attached = false;
-  /* check if we can enter the network with basic settings */
-  do {
-    attached = ue.switch_on();
-    sleep(1);
-    cnt++;
-  } while (!attached && cnt <= 3 && running);
-  if (!attached || !tb.is_finished()) {
-    cout << "Could not attach to the network. Check configuration.\n" << endl;
-
-    pthread_cancel(input);
-    pthread_join(input, nullptr);
-    metricshub.stop();
-    ue.stop();
-    cout << "---  exiting  ---" << endl;
-    exit(SRSLTE_ERROR);
-  }
-
-  cout << "Successfully connected to the network. Configuration is correct.\n" << endl;
-  cout << "Detaching UE..." << endl;
-  ue.switch_off();
-
   uint testcase_id = 0;
-
   /* eia_mask / eea_mask:
    * 0b0001 means ExA0 is enabled,
    * 0b1000 means ExA3 is enabled. */
-  for (uint8_t eia_mask = 0; eia_mask <= 0b1111 && running ; eia_mask++) {
+  for (uint8_t eia_mask = 0; eia_mask <= 0b1111 && running; eia_mask++) {
     for (uint8_t eea_mask = 0; eea_mask <= 0b1111 && running; eea_mask++) {
+
+      if (fast_test) {
+        if (eia_mask & 0b0110 || eea_mask & 0b0110) {
+          cout << "Skipping testcase:" << endl;
+          continue;
+        }
+      }
+
+      // do a normal attach to check if everything still works
+      test_connection(&ue, &tb, args);
+
+      // now the actual testcase
       ue.enable_sec_algo(EIA, 0, eia_mask & 0b0001);
       ue.enable_sec_algo(EIA, 1, eia_mask & 0b0010);
       ue.enable_sec_algo(EIA, 2, eia_mask & 0b0100);
@@ -656,36 +682,45 @@ int main(int argc, char* argv[])
       ue.enable_sec_algo(EEA, 2, eea_mask & 0b0100);
       ue.enable_sec_algo(EEA, 3, eea_mask & 0b1000);
 
+      uint cnt = 0;
       cout << "Attaching UE... EIA: " << bitset<8>(eia_mask) << " EEA: " << bitset<8>(eea_mask) << endl;
-      cnt = 0;
-      attached = false;
       do {
         testcase_id = tb.start_testcase(eia_mask, eea_mask);
 
-        std::stringstream ss1, ss2;
-        ss1 << args.stack.pcap.filename << "_ID_" << std::setfill('0') << std::setw(4) << testcase_id << "_EIA_" << bitset<8>(eia_mask) << "_EEA_" << bitset<8>(eea_mask) << "_try_" << cnt << ".pcap";
-        mac_pcap_filename = ss1.str();
-        ss2 << args.stack.pcap.nas_filename << "_ID_" << std::setfill('0') << std::setw(4) << testcase_id << "_EIA_" << bitset<8>(eia_mask) << "_EEA_" << bitset<8>(eea_mask) << "_try_" << cnt << ".pcap";
-        nas_pcap_filename = ss2.str();
+        std::string mac_pcap_filename, nas_pcap_filename;
+        {
+          std::stringstream ss;
+          ss << args.stack.pcap.filename << "_ID_" << std::setfill('0') << std::setw(4) << testcase_id << "_EIA_"
+             << bitset<8>(eia_mask) << "_EEA_" << bitset<8>(eea_mask) << "_try_" << cnt << ".pcap";
+          mac_pcap_filename = ss.str();
+        }
+        {
+          std::stringstream ss;
+          ss << args.stack.pcap.nas_filename << "_ID_" << std::setfill('0') << std::setw(4) << testcase_id << "_EIA_"
+             << bitset<8>(eia_mask) << "_EEA_" << bitset<8>(eea_mask) << "_try_" << cnt << ".pcap";
+          nas_pcap_filename = ss.str();
+        }
 
         ue.enable_pcap(mac_pcap_filename, nas_pcap_filename);
 
-        attached = ue.switch_on();
+        ue.switch_on();
 
         uint timeout_ms = 1000;
-        uint i_ms = 0;
-        while (!tb.is_finished()  && i_ms < timeout_ms && running ) {
+        uint i_ms       = 0;
+        while (!tb.is_finished() && i_ms < timeout_ms && running) {
           usleep(1000);
           i_ms += 1;
         };
 
-        bool detached = ue.switch_off();
+        ue.switch_off();
+        sleep(1);
         cnt++;
       } while (!tb.is_finished() && running && cnt <= 4);
       if (!tb.is_finished()) {
         cout << "No result after " << cnt << " tries, aborting testcase EIA: " << bitset<8>(eia_mask)
              << " EEA: " << bitset<8>(eea_mask) << endl;
-        log_results.error("No result after %i tries, aborting. Check manually! EIA: %s EEA: %s\n", cnt,
+        log_results.error("No result after %i tries, aborting. Check manually! EIA: %s EEA: %s\n",
+                          cnt,
                           bitset<8>(eia_mask).to_string().c_str(),
                           bitset<8>(eea_mask).to_string().c_str());
       }
