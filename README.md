@@ -35,54 +35,78 @@ We typically use Ettus USRP B210 as Software Defined Radio, and the smartcard re
 
 First, build the docker image:
 ```console
-host:~$ git clone https://github.com/mrlnc/eia0.git
-host:~$ cd eia0
-host:eia0$ docker build -t sec_algo_test .
+host:~$ git clone https://github.com/mrlnc/LTE-ciphercheck.git
+host:~$ cd LTE-ciphercheck
+host:LTE-ciphercheck$ docker build -t LTE-ciphercheck .
 ```
 
 Run tests with the `start_test.sh` script, that feeds the required parameters to the docker image.
 
 ```
-host:eia0$ ./start-test.sh --dl-earfcn 123 --apn internet --imei <IMEI of your smartphone>
+host:LTE-ciphercheck$ ./start-test.sh --dl-earfcn 123 --apn internet --imei <IMEI of your smartphone>
 ```
 
 ## Advanced Configuration
 
 Basically, this software is just [srsLTE](https://github.com/srsLTE/srsLTE) with minor changes. See the [srsLTE README](https://github.com/srsLTE/srsLTE/blob/master/README.md) for detailed build instructions, and [www.srslte.com](srslte.com) for documentation, guides and project news. srsLTE is released under the AGPLv3 license and uses software from the [OpenLTE project](http://sourceforge.net/projects/openlte) for some security functions and for NAS message parsing.
 
-## Configuration
+# Results
 
-An example configuration file is located at `eia0/srsue/ue.conf.example`; copy it to `~/.config/srslte/ue.conf` for convenience.
-```console
-host:eia0$ mkdir ~/.config/srslte
-host:eia0$ cp srsue/ue.conf.example ~/.config/srslte/ue.conf
+After running, the results are stored in a temporary directory:
+```
+host:LTE-ciphercheck$ ./start-test.sh --dl-earfcn 123 --apn internet --imei <IMEI of your smartphone>
+...
+Found Cell:  Mode=FDD, PCI=313, PRB=100, Ports=2, CFO=3.4 KHz
+Found PLMN:  Id=26201, TAC=65349
+...
+---  exiting  ---
+Started 2020-03-30_11:38, finished 2020-03-30_11:40
+Results written to /tmp/tmp.R7TrLy872Q on host.
 ```
 
-Configure the cell's frequency:
 ```
-[rf]
-dl_earfcn = 3400
+host $ ls /tmp/tmp.R7TrLy872Q
+config  log  pcap
 ```
 
-The test run will create a PCAP for each testcase -- about 600 files. So consider creating custom directory `/tmp/sec_results/` and point the PCAPs there:
+The main result log file is `log/results.log`
+
+## Accepted Cipher
+
 ```
-[pcap]
-enable = true
-filename = /tmp/sec_results/ue
-nas_enable = true
-nas_filename = /tmp/sec_results/nas
+09:38:44.748108 [Main  ] [I] New Testcase 1 with EIA 11111111 EEA 11111111
+09:38:45.750189 [Main  ] [I] Testcase 1 got NAS Security Mode Command. Integrity: 128-EIA2, Ciphering: 128-EEA2
+09:38:45.906163 [Main  ] [I] Testcase 1 got RRC Security Mode Command. Integrity: 128-EIA2, Ciphering: 128-EEA2
+09:38:45.906188 [Main  ] [I] RRC encryption key - k_rrc_enc
+             0000: 6c 33 eb 8d f0 0e 1e cf ee 5d ef c4 23 fd 8a 97
+             0010: 09 4a de 99 78 30 24 39 e0 fd b8 47 d8 ac d0 9e
+09:38:45.906205 [Main  ] [I] RRC integrity key - k_rrc_int
+             0000: 7b 53 0b 3c 27 ff 61 05 82 60 c7 70 aa 32 bf 0e
+             0010: 47 32 47 f2 a0 4d 3a 45 e8 c9 65 b8 bd 76 07 23
+09:38:45.906213 [Main  ] [I] UP encryption key - k_up_enc
+             0000: 3e 3e 4c 4e bb d3 23 bc 52 de 3a 9d a8 a9 44 c1
+             0010: 67 64 84 29 3c f7 7e 75 dc 3b 80 2a 6e 39 42 da
+09:38:45.910286 [Main  ] [I] Testcase 1 got Attach Accept
 ```
-That will result in files like `/tmp/sec_results/ue_ID_0451_EIA_00001100_EEA_00000010_try_0.pcap`. Last, configure the USIM:
+
+The ciphers here are set to `11111111` -- just everything enabled. This is a connectivity check. The script always performs a connectivty check before running the test case, to make sure everything still works.
+
+We can see here:
+* `NAS Security Mode Command`: the MME accepts the selected ciphers
+* `RRC Security Mode Command`: the eNodeB accepts them, too
+* Security Keys (for reading the RRC PCAPs)
+* `Attach Accept`: the Attach procedure has finished, we were assigned an IP address
+
+## Rejected Cipher
+
 ```
-[usim]
-mode = pcsc
-#algo = xor
-#opc  = 63BFA50EE6523365FF14C1F45F88737D
-#k    = 00112233445566778899aabbccddeeff
-#imsi = 001010123456789
-imei = 353490069873319
+10:14:58.912488 [Main  ] [I] New Testcase 44 with EIA 00001001 EEA 00000001
+10:14:59.390112 [Main  ] [I] Testcase 44 got Attach Reject, cause: MME_EMM_CAUSE_PROTOCOL_ERROR_UNSPECIFIED
 ```
-Fill in an IMEI of one of your devices. The other parameters are read from the SIM card.
+
+In this test case, the cipher selection for integrity protection is 00001001, that is, EIA-ZUC (0b1000) and EIA-NULL (0b0001) only. For encryption, only NULL (0b0001) is allowed.
+
+The network should not accept such configuration. In this example, the network is properly configured and rejects the connection.
 
 # Testing Procedure
 
@@ -95,6 +119,6 @@ We perform one connection setup for each possible combination of ciphers and che
 
 # Credits
 
-srsLTE is a free and open-source LTE software suite developed by SRS (www.softwareradiosystems.com).
+srsLTE is a free and open-source LTE software suite developed by SRS (www.softwareradiosystems.com). See [www.srslte.com](srslte.com) for documentation, guides and project news. srsLTE is released under the AGPLv3 license and uses software from the [OpenLTE project](http://sourceforge.net/projects/openlte) for some security functions and for NAS message parsing.
 
 [Katharina Kohls](https://kkohls.org) allowed me to use the pictograms, taken from her research papers or presentations. Thanks!
