@@ -67,7 +67,7 @@ sudo docker run \
     --privileged \
     -v ${TARGET_DIR}/config/ue.conf:/etc/srslte/ue.conf \
     -v $(realpath ${TARGET_DIR}):/tmp/results \
-    sec_algo_test
+    LTE-ciphercheck
 
 END_DATE=$(date +%Y-%m-%d_%H:%M)
 
