@@ -5,7 +5,7 @@ This tool quickly tests LTE networks for their cipher support. It's for use by t
 Check out our research paper and talk at WiSec 2019 ([Paper](./img/wisec19-final123.pdf), [Talk](./img/WiSec19-LTE_Security_Disabled.pdf)):
 > Merlin Chlosta, David Rupprecht, Thorsten Holz, and Christina Pöpper. 2019. LTE Security Disabled—Misconfiguration in Commercial Networks. In 12th ACM Conference on Security and Privacy in Wireless and Mobile Networks (WiSec ’19), May 15–17, 2019, Miami, FL, USA. ACM, New York, NY, USA, 6 pages. https://doi.org/10.1145/3317549.3324927
 
-Contact me at [merlin.chlosta+eia0@rub.de](merlin.chlosta+eia0@rub.de)
+Contact me at [merlin.chlosta+eia0@rub.de](mailto:merlin.chlosta+eia0@rub.de) for inquiries.
 
 # Encryption in LTE Networks
 
@@ -21,9 +21,11 @@ Networks and smartphones must support AES and Snow3G. ZUC is optional. The NULL 
 
 ## Impact of Misconfigurations
 
-If a network is poorly configured, man-in-the-middle attacks become trivial. If a network accepts unprotected connections, attackers can impersonate benign users.
+If a network is poorly configured, man-in-the-middle attacks become trivial. If a network accepts unprotected connections, attackers can impersonate benign users. That means, the attacker get's an IP address, while the unaware user pays for the data.
 
 ![MitM](./img/mitm.png)
+
+Due to roaming, your users might be affected even if your network is properly configured; attackers can authenticate to vulnerable roaming partner networks.
 
 # Setup
 
@@ -46,9 +48,11 @@ Run tests with the `start_test.sh` script, that feeds the required parameters to
 host:LTE-ciphercheck$ ./start-test.sh --dl-earfcn 123 --apn internet --imei <IMEI of your smartphone>
 ```
 
+This executes a minimal test set with only a few vulnerable cases. 
+
 ## Advanced Configuration
 
-Basically, this software is just [srsLTE](https://github.com/srsLTE/srsLTE) with minor changes. See the [srsLTE README](https://github.com/srsLTE/srsLTE/blob/master/README.md) for detailed build instructions, and [www.srslte.com](srslte.com) for documentation, guides and project news. srsLTE is released under the AGPLv3 license and uses software from the [OpenLTE project](http://sourceforge.net/projects/openlte) for some security functions and for NAS message parsing.
+Basically, this software is just [srsLTE](https://github.com/srsLTE/srsLTE) with minor changes. See the [srsLTE README](https://github.com/srsLTE/srsLTE/blob/master/README.md) for detailed build instructions, and [www.srslte.com](srslte.com) for documentation and guides.
 
 # Results
 
@@ -69,7 +73,7 @@ host $ ls /tmp/tmp.R7TrLy872Q
 config  log  pcap
 ```
 
-The main result log file is `log/results.log`
+The main result log file is `log/results.log`.
 
 ## Accepted Cipher
 
