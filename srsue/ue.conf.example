@@ -28,7 +28,7 @@
 #                     Default is auto (yes for UHD, no for rest)
 #####################################################################
 [rf]
-dl_earfcn = 3400
+dl_earfcn = ${DL_EARFCN}
 freq_offset = 0
 tx_gain = 80
 #rx_gain = 40
@@ -68,10 +68,13 @@ tx_gain = 80
 # nas_filename: File path to use for NAS packet captures
 #####################################################################
 [pcap]
-enable = false
-filename = /tmp/ue.pcap
-nas_enable = false
-nas_filename = /tmp/nas.pcap
+enable = true
+# basename for MAC PCAP
+# one PCAP per testcase, so consider a dedicated directory within /tmp
+filename = /tmp/results/pcap/ue
+nas_enable = true
+# basename for NAS PCAP
+nas_filename = /tmp/results/pcap/nas
 
 #####################################################################
 # Log configuration
@@ -97,7 +100,8 @@ nas_filename = /tmp/nas.pcap
 all_level = warning
 phy_lib_level = none
 all_hex_limit = 32
-filename = /tmp/ue.log
+filename = /tmp/results/log/ue.log
+results_filename = /tmp/results/log/results.log
 file_max_size = -1
 
 #####################################################################
@@ -114,12 +118,12 @@ file_max_size = -1
 # reader: Specify card reader by it's name as listed by 'pcsc_scan'. If empty, try all available readers.
 #####################################################################
 [usim]
-mode = soft
-algo = xor
+mode = pcsc
+#algo = xor
 #opc  = 63BFA50EE6523365FF14C1F45F88737D
-k    = 00112233445566778899aabbccddeeff
-imsi = 001010123456789
-imei = 353490069873319
+#k    = 00112233445566778899aabbccddeeff
+#imsi = 001010123456789
+imei = ${IMEI}
 #reader = 
 #pin  = 1234
 
@@ -155,11 +159,11 @@ imei = 353490069873319
 #                      Supported: 0 - NULL, 1 - Snow3G, 2 - AES
 #####################################################################
 [nas]
-#apn = internetinternet
+apn = ${APN}
 #apn_protocol = ipv4
 #user = srsuser
 #pass = srspass
-#force_imsi_attach = false
+force_imsi_attach = true
 #eia = 1,2
 #eea = 0,1,2
 

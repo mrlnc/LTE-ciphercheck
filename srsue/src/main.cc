@@ -32,11 +32,15 @@
 #include <boost/program_options.hpp>
 #include <boost/program_options/parsers.hpp>
 #include <iostream>
+#include <iomanip>
 #include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string>
 #include <unistd.h>
+#include "srsue/hdr/testbench.h"
+#include <bitset>
+#include "srsue/hdr/ue.h"
 
 extern bool simulate_rlf;
 
@@ -55,6 +59,8 @@ static metrics_stdout* metrics_screen = nullptr;
  *  Program arguments processing
  ***********************************************************************/
 string config_file;
+bool   fast_test;
+bool   always_test_conn;
 
 static int parse_args(all_args_t* args, int argc, char* argv[])
 {
@@ -131,6 +137,8 @@ static int parse_args(all_args_t* args, int argc, char* argv[])
     ("pcap.nas_filename", bpo::value<string>(&args->stack.pcap.nas_filename)->default_value("ue_nas.pcap"), "NAS layer capture filename (useful when NAS encryption is enabled)")
 
     ("gui.enable", bpo::value<bool>(&args->gui.enable)->default_value(false), "Enable GUI plots")
+    ("fast-test", bpo::value<bool>(&fast_test)->default_value(false), "Fast tests; skip those with AES or Snow3G")
+    ("always-test-connection", bpo::value<bool>(&always_test_conn)->default_value(false), "Between test cases, connect with valid config.")
 
     ("log.rf_level", bpo::value<string>(&args->rf.log_level), "RF log level")
     ("log.phy_level", bpo::value<string>(&args->phy.log.phy_level), "PHY log level")
@@ -157,6 +165,7 @@ static int parse_args(all_args_t* args, int argc, char* argv[])
     ("log.all_hex_limit", bpo::value<int>(&args->log.all_hex_limit)->default_value(32), "ALL log hex dump limit")
 
     ("log.filename", bpo::value<string>(&args->log.filename)->default_value("/tmp/ue.log"), "Log filename")
+    ("log.results_filename", bpo::value<string>(&args->log.results_filename)->default_value("/tmp/sec_results.log"), "Sec Algo Test Results filename")
     ("log.file_max_size", bpo::value<int>(&args->log.file_max_size)->default_value(-1), "Maximum file size (in kilobytes). When passed, multiple files are created. Default -1 (single file)")
 
     ("usim.mode", bpo::value<string>(&args->stack.usim.mode)->default_value("soft"), "USIM mode (soft or pcsc)")
@@ -580,15 +589,72 @@ static void* input_loop(void*)
   return nullptr;
 }
 
+/* check if we can still connect with valid parameters. */
+bool test_connection(srsue::ue* ue, testbench* tb, all_args_t args)
+{
+  uint attempt = 0;
+  uint max_attempt = 3;
+  uint timeout_ms = 3000;
+
+  // enable all algorithms
+  for (uint i = 0; i < 4; i++) {
+    ue->enable_sec_algo(EIA, i, true);
+    ue->enable_sec_algo(EEA, i, true);
+  }
+
+  // set the testcase for logging
+  tb->start_testcase(0xff, 0xff);
+
+  std::string mac_pcap_filename, nas_pcap_filename;
+  {
+    std::stringstream ss;
+    ss << args.stack.pcap.filename << "_conn_test.pcap";
+    mac_pcap_filename = ss.str();
+  }
+  {
+    std::stringstream ss;
+    ss << args.stack.pcap.nas_filename << "_conn_test.pcap";
+    nas_pcap_filename = ss.str();
+  }
+
+  ue->enable_pcap(mac_pcap_filename, nas_pcap_filename);
+
+  for (attempt = 0; attempt < max_attempt; attempt++) {
+    ue->reset();
+    ue->switch_on();
+
+    uint i_ms       = 0;
+    while (!tb->is_connected() && i_ms < timeout_ms && running) {
+      usleep(1000);
+      i_ms += 1;
+    };
+
+    ue->switch_off();
+
+    if (tb->is_connected()) {
+      return true;
+    } else {
+      cout << "Connection failed (" << attempt+1 << "/" << max_attempt << ")" << endl;
+    }
+  }
+  return false;
+}
+
 int main(int argc, char* argv[])
 {
   srslte_register_signal_handler();
   srslte_debug_handle_crash(argc, argv);
 
+  cout << "LTE-Ciphercheck -- check security algorithm support of your local network." << endl;
+
   all_args_t args = {};
   if (parse_args(&args, argc, argv) != SRSLTE_SUCCESS) {
     return SRSLTE_ERROR;
   };
+
+  srslte::logger_file   logger_file;
+  srslte::logger_file   logger_file_results;
+  srslte::log_filter    log_results;
 
   // Setup logging
   srslte::logger_stdout logger_stdout;
@@ -600,10 +666,24 @@ int main(int argc, char* argv[])
     logger = &logger_file;
   }
   srslte::logmap::set_default_logger(logger);
+  srslte::logger* results_logger = nullptr;
+  if (args.log.results_filename == "stdout") {
+    results_logger = &logger_stdout;
+  } else {
+    logger_file_results.init(args.log.results_filename, args.log.file_max_size);
+    results_logger = &logger_file_results;
+  }
+
+  // Init UE log
+  log_results.init("Main  ", results_logger);
+  log_results.set_level(srslte::LOG_LEVEL_INFO);
+  log_results.set_hex_limit(32);
+
+  testbench tb(&log_results);
 
   // Create UE instance
   srsue::ue ue;
-  if (ue.init(args, logger)) {
+  if (ue.init(args, &tb, logger)) {
     ue.stop();
     return SRSLTE_SUCCESS;
   }
@@ -628,18 +708,103 @@ int main(int argc, char* argv[])
   pthread_t input;
   pthread_create(&input, nullptr, &input_loop, &args);
 
-  cout << "Attaching UE..." << endl;
-  ue.switch_on();
-
-  if (args.gui.enable) {
-    ue.start_plot();
+  cout << "Testing connection to network with valid configuration…" << endl;
+  if (!test_connection(&ue, &tb, args)) {
+      cout << "Connection failed. Check configuration." << endl;
+      // terminate test
+      running = false;
   }
 
-  while (running) {
-    sleep(1);
+  cout << "Starting test…" << endl;
+  if (fast_test) {
+    cout << "'fast test' selected. skipping test cases with AES and Snow3G enabled." << endl;
   }
 
-  ue.switch_off();
+  uint testcase_id = 0;
+  uint max_attempt = 3;
+  /* eia_mask / eea_mask:
+   * 0b0001 means ExA0 is enabled,
+   * 0b1000 means ExA3 is enabled. */
+  for (uint8_t eia_mask = 0; eia_mask <= 0b1111 && running; eia_mask++) {
+    for (uint8_t eea_mask = 0; eea_mask <= 0b1111 && running; eea_mask++) {
+      uint attempt = 0;
+
+      if (fast_test) {
+        if (eia_mask & 0b0110 || eea_mask & 0b0110) {
+          // these tests have AES or Snow3G selected, so most likely, the network selects those
+          continue;
+        }
+      }
+
+      if (always_test_conn && test_connection(&ue, &tb, args)) {
+        cout << "Connection failed. Check configuration." << endl;
+        // terminate test
+        running = false;
+      }
+
+      ue.reset();
+
+      cout << "########################################################" << endl;
+      cout << "Starting Testcase. EIA: " << bitset<8>(eia_mask) << " EEA: " << bitset<8>(eea_mask) << endl;
+      cout << "########################################################" << endl;
+
+      do {
+        ue.enable_sec_algo(EIA, 0, eia_mask & 0b0001);
+        ue.enable_sec_algo(EIA, 1, eia_mask & 0b0010);
+        ue.enable_sec_algo(EIA, 2, eia_mask & 0b0100);
+        ue.enable_sec_algo(EIA, 3, eia_mask & 0b1000);
+        
+        ue.enable_sec_algo(EEA, 0, eea_mask & 0b0001);
+        ue.enable_sec_algo(EEA, 1, eea_mask & 0b0010);
+        ue.enable_sec_algo(EEA, 2, eea_mask & 0b0100);
+        ue.enable_sec_algo(EEA, 3, eea_mask & 0b1000);
+        testcase_id = tb.start_testcase(eia_mask, eea_mask);
+
+        std::string mac_pcap_filename, nas_pcap_filename;
+        {
+          std::stringstream ss;
+          ss << args.stack.pcap.filename << "_ID_" << std::setfill('0') << std::setw(4) << testcase_id << "_EIA_"
+             << bitset<8>(eia_mask) << "_EEA_" << bitset<8>(eea_mask) << "_try_" << attempt << ".pcap";
+          mac_pcap_filename = ss.str();
+        }
+        {
+          std::stringstream ss;
+          ss << args.stack.pcap.nas_filename << "_ID_" << std::setfill('0') << std::setw(4) << testcase_id << "_EIA_"
+             << bitset<8>(eia_mask) << "_EEA_" << bitset<8>(eea_mask) << "_try_" << attempt << ".pcap";
+          nas_pcap_filename = ss.str();
+        }
+        tb.set_pcap(nas_pcap_filename, mac_pcap_filename);
+
+        ue.enable_pcap(mac_pcap_filename, nas_pcap_filename);
+
+        ue.switch_on();
+
+        uint timeout_ms = 5000;
+        uint i_ms       = 0;
+        while (!tb.is_finished() && i_ms < timeout_ms && running) {
+          usleep(1000);
+          i_ms += 1;
+        };
+
+        ue.switch_off();
+        sleep(1);
+        ue.reset();
+        attempt++;
+      } while (!tb.is_finished() && running && attempt <= max_attempt);
+      if (!tb.is_finished()) {
+        cout << "No result after " << attempt << " tries, aborting testcase EIA: " << bitset<8>(eia_mask)
+             << " EEA: " << bitset<8>(eea_mask) << endl;
+        log_results.error("No result after %i tries, aborting. Check manually! EIA: %s EEA: %s\n",
+                          attempt,
+                          bitset<8>(eia_mask).to_string().c_str(),
+                          bitset<8>(eea_mask).to_string().c_str());
+      } else {
+        cout << tb.get_summary() << endl;
+        log_results.info("%s", tb.get_summary().c_str());
+      }
+    }
+  }
+
   pthread_cancel(input);
   pthread_join(input, nullptr);
   metricshub.stop();

@@ -1,220 +1,134 @@
-srsLTE
-========
+This tool quickly tests LTE networks for their cipher support. It's for use by telecom operators only.
 
-[![Build Status](https://travis-ci.org/srsLTE/srsLTE.svg?branch=master)](https://travis-ci.org/srsLTE/srsLTE)
-[![Language grade: C/C++](https://img.shields.io/lgtm/grade/cpp/g/srsLTE/srsLTE.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/srsLTE/srsLTE/context:cpp)
-[![Coverity](https://scan.coverity.com/projects/10045/badge.svg)](https://scan.coverity.com/projects/srslte)
+## LTE Security Disabled—Misconfiguration in Commercial Networks.
 
-srsLTE is a free and open-source LTE software suite developed by SRS (www.softwareradiosystems.com). 
-See the srsLTE project pages (www.srslte.com) for documentation, guides and project news.
+Check out our research paper and talk at WiSec 2019 ([Paper](./img/wisec19-final123.pdf), [Talk](./img/WiSec19-LTE_Security_Disabled.pdf)):
+> Merlin Chlosta, David Rupprecht, Thorsten Holz, and Christina Pöpper. 2019. LTE Security Disabled—Misconfiguration in Commercial Networks. In 12th ACM Conference on Security and Privacy in Wireless and Mobile Networks (WiSec ’19), May 15–17, 2019, Miami, FL, USA. ACM, New York, NY, USA, 6 pages. https://doi.org/10.1145/3317549.3324927
 
-It includes:
-  * srsUE - a complete SDR LTE UE application featuring all layers from PHY to IP
-  * srsENB - a complete SDR LTE eNodeB application 
-  * srsEPC - a light-weight LTE core network implementation with MME, HSS and S/P-GW
-  * a highly modular set of common libraries for PHY, MAC, RLC, PDCP, RRC, NAS, S1AP and GW layers. 
+Contact me at [merlin.chlosta+eia0@rub.de](mailto:merlin.chlosta+eia0@rub.de) for inquiries.
 
-srsLTE is released under the AGPLv3 license and uses software from the OpenLTE project (http://sourceforge.net/projects/openlte) for some security functions and for NAS message parsing.
+# Encryption in LTE Networks
 
-Common Features
----------------
+LTE networks protect user traffic and control data with encryption, and additionally integrity-protect control data. We're going to have a look at the method that is used for securing the data.
 
- * LTE Release 10 aligned
- * Tested bandwidths: 1.4, 3, 5, 10, 15 and 20 MHz
- * Transmission mode 1 (single antenna), 2 (transmit diversity), 3 (CCD) and 4 (closed-loop spatial multiplexing)
- * Frequency-based ZF and MMSE equalizer
- * Evolved multimedia broadcast and multicast service (eMBMS)
- * Highly optimized Turbo Decoder available in Intel SSE4.1/AVX2 (+100 Mbps) and standard C (+25 Mbps)
- * MAC, RLC, PDCP, RRC, NAS, S1AP and GW layers
- * Detailed log system with per-layer log levels and hex dumps
- * MAC layer wireshark packet capture
- * Command-line trace metrics
- * Detailed input configuration files
- * Channel simulator for EPA, EVA, and ETU 3GPP channels
- * ZeroMQ-based fake RF driver for I/Q over IPC/network  
+![Transport Security](./img/transport_security.png)
 
-srsUE Features
---------------
+There are multiple ciphers available, thus, smartphone and network need to negotiate which one to use. Snow3G, AES and ZUC actually protect the messages. However, there's a 'NULL' algorithm for testing purposes and emergency calls -- it does not provide any protection.
 
- * FDD and TDD configuration
- * Carrier Aggregation support
- * Cell search and synchronization procedure for the UE
- * Soft USIM supporting Milenage and XOR authentication
- * Hard USIM support using PCSC framework
- * Virtual network interface *tun_srsue* created upon network attach
- * QoS support
- * 150 Mbps DL in 20 MHz MIMO TM3/TM4 configuration in i7 Quad-Core CPU.
- * 75 Mbps DL in 20 MHz SISO configuration in i7 Quad-Core CPU.
- * 36 Mbps DL in 10 MHz SISO configuration in i5 Dual-Core CPU.
+![Cipher Support](./img/cipher_support.png)
 
-srsUE has been fully tested and validated with the following network equipment: 
- * Amarisoft LTE100 eNodeB and EPC
- * Nokia FlexiRadio family FSMF system module with 1800MHz FHED radio module and TravelHawk EPC simulator
- * Huawei DBS3900 
- * Octasic Flexicell LTE-FDD NIB
+Networks and smartphones must support AES and Snow3G. ZUC is optional. The NULL algorithm may only be selected for emergency purposes.
 
-srsENB Features
----------------
+## Impact of Misconfigurations
 
- * FDD configuration
- * Round Robin MAC scheduler with FAPI-like C++ API
- * SR support
- * Periodic and Aperiodic CQI feedback support
- * Standard S1AP and GTP-U interfaces to the Core Network
- * 150 Mbps DL in 20 MHz MIMO TM3/TM4 with commercial UEs
- * 75 Mbps DL in SISO configuration with commercial UEs
- * 50 Mbps UL in 20 MHz with commercial UEs
- * User-plane encryption
+If a network is poorly configured, man-in-the-middle attacks become trivial. If a network accepts unprotected connections, attackers can impersonate benign users. That means, the attacker get's an IP address, while the unaware user pays for the data.
 
-srsENB has been tested and validated with the following handsets:
- * LG Nexus 5 and 4
- * Motorola Moto G4 plus and G5
- * Huawei P9/P9lite, P10/P10lite, P20/P20lite
- * Huawei dongles: E3276 and E398
+![MitM](./img/mitm.png)
 
-srsEPC Features
----------------
+Due to roaming, your users might be affected even if your network is properly configured; attackers can authenticate to vulnerable roaming partner networks.
 
- * Single binary, light-weight LTE EPC implementation with:
-   * MME (Mobility Management Entity) with standard S1AP and GTP-U interface to eNB
-   * S/P-GW with standard SGi exposed as virtual network interface (TUN device)
-   * HSS (Home Subscriber Server) with configurable user database in CSV format
- * Support for paging
+# Setup
 
-Hardware
---------
+The whole setup looks like this:
 
-The library currently supports the Ettus Universal Hardware Driver (UHD) and the bladeRF driver. Thus, any hardware supported by UHD or bladeRF can be used. There is no sampling rate conversion, therefore the hardware should support 30.72 MHz clock in order to work correctly with LTE sampling frequencies and decode signals from live LTE base stations. 
+![Setup](./img/system_overview.png)
 
-We have tested the following hardware: 
- * USRP B210
- * USRP B205mini
- * USRP X300 (recommended UHD version: 3.9.7)
- * limeSDR
- * bladeRF
+We typically use Ettus USRP B210 as Software Defined Radio, and the smartcard readers that are built into the Dell standard keyboards.
 
-Build Instructions
-------------------
-
-* Mandatory requirements: 
-  * Common:
-    * cmake              https://cmake.org/
-    * libfftw            http://www.fftw.org/
-    * PolarSSL/mbedTLS   https://tls.mbed.org
-  * srsUE:
-    * Boost:             http://www.boost.org
-  * srsENB:
-    * Boost:             http://www.boost.org
-    * lksctp:            http://lksctp.sourceforge.net/
-    * config:            http://www.hyperrealm.com/libconfig/
-  * srsEPC:
-    * Boost:             http://www.boost.org
-    * lksctp:            http://lksctp.sourceforge.net/
-    * config:            http://www.hyperrealm.com/libconfig/
-
-For example, on Ubuntu 17.04, one can install the required libraries with:
-```
-sudo apt-get install cmake libfftw3-dev libmbedtls-dev libboost-program-options-dev libconfig++-dev libsctp-dev
-```
-or on Fedora:
-```
-dnf install cmake fftw3-devel polarssl-devel lksctp-tools-devel libconfig-devel boost-devel
+First, build the docker image:
+```console
+host:~$ git clone https://github.com/mrlnc/LTE-ciphercheck.git
+host:~$ cd LTE-ciphercheck
+host:LTE-ciphercheck$ docker build -t LTE-ciphercheck .
 ```
 
-Note that depending on your flavor and version of Linux, the actual package names may be different.
-
-* Optional requirements: 
-  * srsgui:              https://github.com/srslte/srsgui - for real-time plotting.
-  * libpcsclite-dev:     https://pcsclite.apdu.fr/ - for accessing smart card readers
-
-* RF front-end driver:
-  * UHD:                 https://github.com/EttusResearch/uhd
-  * SoapySDR:            https://github.com/pothosware/SoapySDR
-  * BladeRF:             https://github.com/Nuand/bladeRF
-  * ZeroMQ:              https://github.com/zeromq
-
-Download and build srsLTE: 
-```
-git clone https://github.com/srsLTE/srsLTE.git
-cd srsLTE
-mkdir build
-cd build
-cmake ../
-make
-make test
-```
-
-Install srsLTE:
+Run tests with the `start_test.sh` script, that feeds the required parameters to the docker image.
 
 ```
-sudo make install
-srslte_install_configs.sh user
+host:LTE-ciphercheck$ ./start-test.sh --dl-earfcn 123 --apn internet --imei <IMEI of your smartphone>
 ```
 
-This installs srsLTE and also copies the default srsLTE config files to
-the user's home directory (~/.config/srslte).
+This executes a minimal test set with only a few vulnerable cases. 
 
+## Advanced Configuration
 
-Execution Instructions
-----------------------
+Basically, this software is just [srsLTE](https://github.com/srsLTE/srsLTE) with minor changes. See the [srsLTE README](https://github.com/srsLTE/srsLTE/blob/master/README.md) for detailed build instructions, and [www.srslte.com](srslte.com) for documentation and guides.
 
-The srsUE, srsENB and srsEPC applications include example configuration files
-that should be copied (manually or by using the convenience script) and modified,
-if needed, to meet the system configuration.
-On many systems they should work out of the box.
+# Results
 
-By default, all applications will search for config files in the user's home
-directory (~/.config/srslte) upon startup.
-
-Note that you have to execute the applications with root privileges to enable
-real-time thread priorities and to permit creation of virtual network interfaces.
-
-srsENB and srsEPC can run on the same machine as a network-in-the-box configuration.
-srsUE needs to run on a separate machine.
-
-If you have installed the software suite using ```sudo make install``` and
-have installed the example config files using ```srslte_install_configs.sh user```,
-you may just start all applications with their default parameters.
-
-### srsEPC
-
-On machine 1, run srsEPC as follows:
-
+After running, the results are stored in a temporary directory:
 ```
-sudo srsepc
+host:LTE-ciphercheck$ ./start-test.sh --dl-earfcn 123 --apn internet --imei <IMEI of your smartphone>
+...
+Found Cell:  Mode=FDD, PCI=313, PRB=100, Ports=2, CFO=3.4 KHz
+Found PLMN:  Id=26201, TAC=65349
+...
+---  exiting  ---
+Started 2020-03-30_11:38, finished 2020-03-30_11:40
+Results written to /tmp/tmp.R7TrLy872Q on host.
 ```
 
-Using the default configuration, this creates a virtual network interface
-named "srs_spgw_sgi" on machine 1 with IP 172.16.0.1. All connected UEs
-will be assigned an IP in this network.
-
-### srsENB
-
-Also on machine 1, but in another console, run srsENB as follows:
-
 ```
-sudo srsenb
+host $ ls /tmp/tmp.R7TrLy872Q
+config  log  pcap
 ```
 
-### srsUE
+The main result log file is `log/results.log`.
 
-On machine 2, run srsUE as follows:
-
-```
-sudo srsue
-```
-
-Using the default configuration, this creates a virtual network interface
-named "tun_srsue" on machine 2 with an IP in the network 172.16.0.x.
-Assuming the UE has been assigned IP 172.16.0.2, you may now exchange
-IP traffic with machine 1 over the LTE link. For example, run a ping to 
-the default SGi IP address:
+## Accepted Cipher
 
 ```
-ping 172.16.0.1
+09:38:44.748108 [Main  ] [I] New Testcase 1 with EIA 11111111 EEA 11111111
+09:38:45.750189 [Main  ] [I] Testcase 1 got NAS Security Mode Command. Integrity: 128-EIA2, Ciphering: 128-EEA2
+09:38:45.906163 [Main  ] [I] Testcase 1 got RRC Security Mode Command. Integrity: 128-EIA2, Ciphering: 128-EEA2
+09:38:45.906188 [Main  ] [I] RRC encryption key - k_rrc_enc
+             0000: 6c 33 eb 8d f0 0e 1e cf ee 5d ef c4 23 fd 8a 97
+             0010: 09 4a de 99 78 30 24 39 e0 fd b8 47 d8 ac d0 9e
+09:38:45.906205 [Main  ] [I] RRC integrity key - k_rrc_int
+             0000: 7b 53 0b 3c 27 ff 61 05 82 60 c7 70 aa 32 bf 0e
+             0010: 47 32 47 f2 a0 4d 3a 45 e8 c9 65 b8 bd 76 07 23
+09:38:45.906213 [Main  ] [I] UP encryption key - k_up_enc
+             0000: 3e 3e 4c 4e bb d3 23 bc 52 de 3a 9d a8 a9 44 c1
+             0010: 67 64 84 29 3c f7 7e 75 dc 3b 80 2a 6e 39 42 da
+09:38:45.910286 [Main  ] [I] Testcase 1 got Attach Accept
 ```
 
-Support
-========
+The ciphers here are set to `11111111` -- just everything enabled. This is a connectivity check. The script always performs a connectivty check before running the test case, to make sure everything still works.
 
-Mailing list: http://www.softwareradiosystems.com/mailman/listinfo/srslte-users
+We can see here:
+* `NAS Security Mode Command`: the MME accepts the selected ciphers
+* `RRC Security Mode Command`: the eNodeB accepts them, too
+* Security Keys (for reading the RRC PCAPs)
+* `Attach Accept`: the Attach procedure has finished, we were assigned an IP address
+
+## Rejected Cipher
+
+```
+10:14:58.912488 [Main  ] [I] New Testcase 44 with EIA 00001001 EEA 00000001
+10:14:59.390112 [Main  ] [I] Testcase 44 got Attach Reject, cause: MME_EMM_CAUSE_PROTOCOL_ERROR_UNSPECIFIED
+```
+
+In this test case, the cipher selection for integrity protection is 00001001, that is, EIA-ZUC (0b1000) and EIA-NULL (0b0001) only. For encryption, only NULL (0b0001) is allowed.
+
+The network should not accept such configuration. In this example, the network is properly configured and rejects the connection.
+
+# Testing Procedure
+
+When the UE starts the connection procedure, it will transmit a list of supported ciphers. The network then selects one of these, based on it's own capabilities. If there's no match, or some policy prohibits some cipher (e.g., NULL), the network must reject the connection attempt.
+
+For example, if the UE signals only NULL ciphers for encryption and integrity protection, the network should not establish a connection as in this example:
+![Setup](./img/test_procedure.png)
+
+We perform one connection setup for each possible combination of ciphers and check whether the network accepts or denies. Since there are 256 combinations, a single test run performs at least that many attaches to the network.
+
+# Credits
+
+srsLTE is a free and open-source LTE software suite developed by SRS (www.softwareradiosystems.com). See [www.srslte.com](srslte.com) for documentation, guides and project news. srsLTE is released under the AGPLv3 license and uses software from the [OpenLTE project](http://sourceforge.net/projects/openlte) for some security functions and for NAS message parsing.
+
+[Katharina Kohls](https://kkohls.org) allowed me to use the pictograms, taken from her research papers or presentations. Thanks!
+
+# Disclaimer
+
+> the software is provided “as is”, without warranty of any kind, express or implied, including but not limited to the warranties of merchantability, fitness for a particular purpose and noninfringement. in no event shall the authors or copyright holders be liable for any claim, damages or other liability, whether in an action of contract, tort or otherwise, arising from, out of or in connection with the software or the use or other dealings in the software.
+
+srsLTE and LTE-ciphercheck might not stick to the LTE standard and break your network.

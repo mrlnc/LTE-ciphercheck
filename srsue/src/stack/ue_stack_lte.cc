@@ -25,6 +25,7 @@
 #include <algorithm>
 #include <chrono>
 #include <numeric>
+#include <bitset>
 
 using namespace srslte;
 
@@ -69,10 +70,12 @@ std::string ue_stack_lte::get_type()
 int ue_stack_lte::init(const stack_args_t&      args_,
                        srslte::logger*          logger_,
                        phy_interface_stack_lte* phy_,
-                       gw_interface_stack*      gw_)
+                       gw_interface_stack*      gw_,
+                       testbench*               tb_)
 {
   phy = phy_;
   gw  = gw_;
+  tb  = tb_;
 
   if (init(args_, logger_)) {
     return SRSLTE_ERROR;
@@ -127,8 +130,8 @@ int ue_stack_lte::init(const stack_args_t& args_, srslte::logger* logger_)
   mac.init(phy, &rlc, &rrc, this);
   rlc.init(&pdcp, &rrc, &timers, 0 /* RB_ID_SRB0 */);
   pdcp.init(&rlc, &rrc, gw);
-  nas.init(usim.get(), &rrc, gw, args.nas);
-  rrc.init(phy, &mac, &rlc, &pdcp, &nas, usim.get(), gw, args.rrc);
+  nas.init(usim.get(), &rrc, gw, tb, args.nas);
+  rrc.init(phy, &mac, &rlc, &pdcp, &nas, usim.get(), gw, tb, this, args.rrc);
 
   running = true;
   start(STACK_MAIN_THREAD_PRIO);
@@ -141,6 +144,22 @@ void ue_stack_lte::stop()
   if (running) {
     pending_tasks.try_push(ue_queue_id, [this]() { stop_impl(); });
     wait_thread_finish();
+  }
+}
+void ue_stack_lte::reset()
+{
+  if (running) {
+    // usim doesn't need reset
+    nas.stop();
+    rrc.leave_connected();
+
+    usleep(50000);
+
+    mac.init(phy, &rlc, &rrc, this);
+    rlc.init(&pdcp, &rrc, &timers, 0 /* RB_ID_SRB0 */);
+    pdcp.init(&rlc, &rrc, gw);
+    nas.init(usim.get(), &rrc, gw, tb, args.nas);
+    rrc.init(phy, &mac, &rlc, &pdcp, &nas, usim.get(), gw, tb, this, args.rrc);
   }
 }
 
@@ -161,6 +180,19 @@ void ue_stack_lte::stop_impl()
   }
   if (args.pcap.nas_enable) {
     nas_pcap.close();
+  }
+}
+
+void ue_stack_lte::enable_pcap(std::string mac_filename, std::string nas_filename) {
+  if (args.pcap.enable) {
+    mac_pcap.close();
+    mac_pcap.open(mac_filename.c_str());
+    mac.start_pcap(&mac_pcap);
+  }
+  if (args.pcap.nas_enable) {
+    nas_pcap.close();
+    nas_pcap.open(nas_filename.c_str());
+    nas.start_pcap(&nas_pcap);
   }
 }
 
@@ -193,6 +225,11 @@ bool ue_stack_lte::switch_off()
   }
 
   return detach_sent;
+}
+
+void ue_stack_lte::enable_sec_algo(sec_algo_type_t type, uint index, bool enable)
+{
+  nas.enable_sec_algo(type, index, enable);
 }
 
 bool ue_stack_lte::enable_data()

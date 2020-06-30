@@ -39,6 +39,7 @@
 #include "srslte/interfaces/ue_interfaces.h"
 #include "srslte/radio/radio.h"
 #include "stack/ue_stack_base.h"
+#include "srsue/hdr/testbench.h"
 
 #include "ue_metrics_interface.h"
 
@@ -59,6 +60,7 @@ typedef struct {
   int         all_hex_limit;
   int         file_max_size;
   std::string filename;
+  std::string results_filename;
 } log_args_t;
 
 typedef struct {
@@ -96,11 +98,15 @@ public:
   ue();
   ~ue();
 
-  int  init(const all_args_t& args_, srslte::logger* logger_);
+  int  init(const all_args_t& args_, testbench* _testbench, srslte::logger* logger_);
   void stop();
+  void reset();
   bool switch_on();
   bool switch_off();
   void start_plot();
+  void enable_sec_algo(sec_algo_type_t type, uint index, bool enable);
+  void enable_pcap(std::string mac_filename, std::string nas_filename);
+
 
   // UE metrics interface
   bool get_metrics(ue_metrics_t* m);
@@ -113,6 +119,8 @@ private:
   std::unique_ptr<srslte::radio>      radio;
   std::unique_ptr<ue_stack_base>      stack;
   std::unique_ptr<gw>                 gw_inst;
+  
+  testbench* tb;
 
   // Generic logger members
   srslte::logger*    logger = nullptr;

@@ -294,6 +294,18 @@ public:
             nas_interface_rrc*     nas_,
             usim_interface_rrc*    usim_,
             gw_interface_rrc*      gw_,
+            stack_interface_rrc*   stack_,
+            const rrc_args_t&      args_);
+
+  void init(phy_interface_rrc_lte* phy_,
+            mac_interface_rrc*     mac_,
+            rlc_interface_rrc*     rlc_,
+            pdcp_interface_rrc*    pdcp_,
+            nas_interface_rrc*     nas_,
+            usim_interface_rrc*    usim_,
+            gw_interface_rrc*      gw_,
+            testbench_interface_rrc* tb_,
+            stack_interface_rrc*   stack_,
             const rrc_args_t&      args_);
 
   void stop();
@@ -325,6 +337,8 @@ public:
   bool     connection_request(srslte::establishment_cause_t cause, srslte::unique_byte_buffer_t dedicated_info_nas);
   void     set_ue_identity(srslte::s_tmsi_t s_tmsi);
   void     paging_completed(bool outcome) final;
+  void leave_connected();
+
 
   // PHY interface
   void in_sync() final;
@@ -380,6 +394,7 @@ private:
   nas_interface_rrc*        nas     = nullptr;
   usim_interface_rrc*       usim    = nullptr;
   gw_interface_rrc*         gw      = nullptr;
+  testbench_interface_rrc*  tb      = nullptr;
 
   srslte::unique_byte_buffer_t dedicated_info_nas;
 
@@ -578,7 +593,6 @@ private:
   void start_go_idle();
   void rrc_connection_release(const std::string& cause);
   void radio_link_failure();
-  void leave_connected();
   void stop_timers();
   void start_con_restablishment(asn1::rrc::reest_cause_e cause);
   void start_cell_reselection();

@@ -136,6 +136,22 @@ void rrc::init(phy_interface_rrc_lte* phy_,
                nas_interface_rrc*     nas_,
                usim_interface_rrc*    usim_,
                gw_interface_rrc*      gw_,
+               stack_interface_rrc*   stack_,
+               const rrc_args_t&      args_)
+{
+  init(phy_, mac_, rlc_, pdcp_, nas_, usim_, gw_, nullptr, stack_, args_);
+}
+
+
+void rrc::init(phy_interface_rrc_lte* phy_,
+               mac_interface_rrc*     mac_,
+               rlc_interface_rrc*     rlc_,
+               pdcp_interface_rrc*    pdcp_,
+               nas_interface_rrc*     nas_,
+               usim_interface_rrc*    usim_,
+               gw_interface_rrc*      gw_,
+               testbench_interface_rrc* tb_,
+               stack_interface_rrc*   stack_,
                const rrc_args_t&      args_)
 {
   pool  = byte_buffer_pool::get_instance();
@@ -146,6 +162,8 @@ void rrc::init(phy_interface_rrc_lte* phy_,
   nas   = nas_;
   usim  = usim_;
   gw    = gw_;
+  tb    = tb_;
+  stack = stack_;
 
   args = args_;
 
@@ -1342,7 +1360,8 @@ void rrc::leave_connected()
   rrc_log->info("Going RRC_IDLE\n");
   if (phy->cell_is_camping()) {
     // Receive paging
-    mac->pcch_start_rx();
+    rrc_log->info("Paging disabled\n");
+    //mac->pcch_start_rx();
   }
 }
 
@@ -1923,6 +1942,8 @@ void rrc::parse_dl_dcch(uint32_t lcid, unique_byte_buffer_t pdu)
       rrc_log->info("Received Security Mode Command eea: %s, eia: %s\n",
                     ciphering_algorithm_id_text[sec_cfg.cipher_algo],
                     integrity_algorithm_id_text[sec_cfg.integ_algo]);
+      
+      tb->report_rrc_security_mode_command(sec_cfg.integ_algo, sec_cfg.cipher_algo);
 
       // Generate AS security keys
       uint8_t k_asme[32];
@@ -1933,6 +1954,9 @@ void rrc::parse_dl_dcch(uint32_t lcid, unique_byte_buffer_t pdu)
       rrc_log->info_hex(sec_cfg.k_rrc_enc.data(), 32, "RRC encryption key - k_rrc_enc");
       rrc_log->info_hex(sec_cfg.k_rrc_int.data(), 32, "RRC integrity key  - k_rrc_int");
       rrc_log->info_hex(sec_cfg.k_up_enc.data(), 32, "UP encryption key  - k_up_enc");
+      tb->report_rrc_key(key_type::k_rrc_enc, sec_cfg.k_rrc_enc.data());
+      tb->report_rrc_key(key_type::k_rrc_int, sec_cfg.k_rrc_int.data());
+      tb->report_rrc_key(key_type::k_up_enc, sec_cfg.k_up_enc.data());
 
       security_is_activated = true;
 

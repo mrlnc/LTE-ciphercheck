@@ -248,11 +248,33 @@ nas::nas(srslte::task_handler_interface* task_handler_) :
 {
 }
 
-void nas::init(usim_interface_nas* usim_, rrc_interface_nas* rrc_, gw_interface_nas* gw_, const nas_args_t& cfg_)
+void nas::init(usim_interface_nas* usim_, rrc_interface_nas* rrc_, gw_interface_nas* gw_, const nas_args_t& cfg_) {
+  init(usim_, rrc_, gw_, nullptr, cfg_);
+}
+
+void nas::init(usim_interface_nas* usim_, rrc_interface_nas* rrc_, gw_interface_nas* gw_, testbench_interface_nas* tb_, const nas_args_t& cfg_)
 {
-  usim = usim_;
-  rrc  = rrc_;
-  gw   = gw_;
+  usim  = usim_;
+  rrc   = rrc_;
+  gw    = gw_;
+  tb    = tb_;
+
+  plmn_is_selected = false;
+  bzero(&current_plmn, sizeof(srslte::plmn_id_t));
+  bzero(&home_plmn, sizeof(srslte::plmn_id_t));
+  have_guti = false;
+  have_guti       = false;
+  have_ctxt       = false;
+  bzero(&ctxt, sizeof(nas_sec_ctxt));
+  ctxt            = {};
+  auth_request    = false;
+  current_sec_hdr = LIBLTE_MME_SECURITY_HDR_TYPE_PLAIN_NAS;
+  attach_attempt_counter = 0;
+  ip_addr       = 0;
+  bzero(&ipv6_if_id, 8);
+  chap_id = 0;
+  transaction_id = 0;
+
   enter_state(EMM_STATE_DEREGISTERED);
 
   if (!usim->get_home_plmn_id(&home_plmn)) {
@@ -332,7 +354,9 @@ void nas::run_tti()
 
 void nas::timer_expired(uint32_t timeout_id)
 {
-  if (timeout_id == t3402.id()) {
+  // if attach fails, then don't re-attach
+  // we handle this in the test logic
+/*   if (timeout_id == t3402.id()) {
     nas_log->info("Timer T3402 expired: trying to attach again\n");
     attach_attempt_counter = 0; // Sec. 5.5.1.1
     start_attach_proc(nullptr, srslte::establishment_cause_t::mo_sig);
@@ -373,7 +397,7 @@ void nas::timer_expired(uint32_t timeout_id)
     start_attach_proc(nullptr, srslte::establishment_cause_t::mo_sig);
   } else {
     nas_log->error("Timeout from unknown timer id %d\n", timeout_id);
-  }
+  } */
 }
 
 /*******************************************************************************
@@ -531,8 +555,21 @@ bool nas::paging(s_tmsi_t* ue_identity)
   return true;
 }
 
-void nas::set_barring(barring_t barring)
+void nas::enable_sec_algo(sec_algo_type_t type, uint index, bool enable)
 {
+  if (index > 7) {
+    nas_log->error("Security Algorithm %s%u is invalid\n", type == EIA ? "EIA" : "EEA", index);
+    return;
+  }
+
+  if (type == EIA) {
+    eia_caps[index] = enable;
+  } else { // EEA
+    eea_caps[index] = enable;
+  }
+}
+
+void nas::set_barring(barring_t barring) {
   current_barring = barring;
 }
 
@@ -593,15 +630,13 @@ void nas::write_pdu(uint32_t lcid, unique_byte_buffer_t pdu)
       break;
     case LIBLTE_MME_SECURITY_HDR_TYPE_INTEGRITY:
     case LIBLTE_MME_SECURITY_HDR_TYPE_INTEGRITY_AND_CIPHERED:
-      if ((integrity_check(pdu.get()))) {
-        if (sec_hdr_type == LIBLTE_MME_SECURITY_HDR_TYPE_INTEGRITY_AND_CIPHERED) {
-          cipher_decrypt(pdu.get());
-        }
-        break;
-      } else {
-        nas_log->error("Not handling NAS message with integrity check error\n");
-        return;
+      if (!(integrity_check(pdu.get()))) {
+        nas_log->error("Integrity check error\n");
       }
+      if (sec_hdr_type == LIBLTE_MME_SECURITY_HDR_TYPE_INTEGRITY_AND_CIPHERED) {
+        cipher_decrypt(pdu.get());
+      }
+      break;
     case LIBLTE_MME_SECURITY_HDR_TYPE_INTEGRITY_AND_CIPHERED_WITH_NEW_EPS_SECURITY_CONTEXT:
       break;
     default:
@@ -773,6 +808,7 @@ void nas::integrity_generate(uint8_t* key_128,
 {
   switch (ctxt.integ_algo) {
     case INTEGRITY_ALGORITHM_ID_EIA0:
+      bzero(mac, 4);
       break;
     case INTEGRITY_ALGORITHM_ID_128_EIA1:
       security_128_eia1(key_128,
@@ -802,6 +838,7 @@ void nas::integrity_generate(uint8_t* key_128,
                         mac);
       break;
     default:
+      bzero(mac, 4);
       break;
   }
 }
@@ -1030,6 +1067,8 @@ void nas::parse_attach_accept(uint32_t lcid, unique_byte_buffer_t pdu)
 
   LIBLTE_MME_ATTACH_ACCEPT_MSG_STRUCT attach_accept = {};
   liblte_mme_unpack_attach_accept_msg((LIBLTE_BYTE_MSG_STRUCT*)pdu.get(), &attach_accept);
+
+  tb->report_attach_accept();
 
   if (attach_accept.eps_attach_result == LIBLTE_MME_EPS_ATTACH_RESULT_EPS_ONLY) {
     // TODO: Handle t3412.unit
@@ -1305,6 +1344,15 @@ void nas::parse_attach_reject(uint32_t lcid, unique_byte_buffer_t pdu)
 
   // TODO: handle other relevant reject causes
 
+  uint8_t eia_mask{};
+  uint8_t eea_mask{};
+  for (uint8_t i = 0; i < 4; i++) {
+    eia_mask |= eia_caps[i] << i;
+    eea_mask |= eea_caps[i] << i;
+  }
+
+  tb->report_attach_reject(attach_rej.emm_cause);
+
   enter_emm_deregistered();
 }
 
@@ -1393,8 +1441,16 @@ void nas::parse_security_mode_command(uint32_t lcid, unique_byte_buffer_t pdu)
     return;
   }
 
-  LIBLTE_MME_SECURITY_MODE_COMMAND_MSG_STRUCT sec_mode_cmd = {};
-  liblte_mme_unpack_security_mode_command_msg((LIBLTE_BYTE_MSG_STRUCT*)pdu.get(), &sec_mode_cmd);
+  LIBLTE_MME_SECURITY_MODE_COMMAND_MSG_STRUCT sec_mode_cmd;
+  bzero(&sec_mode_cmd, sizeof(LIBLTE_MME_SECURITY_MODE_COMMAND_MSG_STRUCT));
+  LIBLTE_MME_SECURITY_MODE_COMPLETE_MSG_STRUCT sec_mode_comp;
+  bzero(&sec_mode_comp, sizeof(LIBLTE_MME_SECURITY_MODE_COMPLETE_MSG_STRUCT));
+
+  LIBLTE_ERROR_ENUM ret = liblte_mme_unpack_security_mode_command_msg((LIBLTE_BYTE_MSG_STRUCT*)pdu.get(), &sec_mode_cmd);
+  if (ret != LIBLTE_SUCCESS) {
+    nas_log->error("Error decoding Security Mode Command\n");
+    return;
+  }
   nas_log->info("Received Security Mode Command ksi: %d, eea: %s, eia: %s\n",
                 sec_mode_cmd.nas_ksi.nas_ksi,
                 ciphering_algorithm_id_text[sec_mode_cmd.selected_nas_sec_algs.type_of_eea],
@@ -1409,6 +1465,7 @@ void nas::parse_security_mode_command(uint32_t lcid, unique_byte_buffer_t pdu)
     if (sec_mode_cmd.nas_ksi.nas_ksi != ctxt.ksi) {
       nas_log->warning("Sending Security Mode Reject due to key set ID mismatch\n");
       send_security_mode_reject(LIBLTE_MME_EMM_CAUSE_SECURITY_MODE_REJECTED_UNSPECIFIED);
+      // TODO:merlin how to deal with this case? does MME change behaviour in next attach?
       return;
     }
   }
@@ -1419,9 +1476,10 @@ void nas::parse_security_mode_command(uint32_t lcid, unique_byte_buffer_t pdu)
 
   // Check capabilities replay
   if (!check_cap_replay(&sec_mode_cmd.ue_security_cap)) {
-    nas_log->warning("Sending Security Mode Reject due to security capabilities replay mismatch\n");
-    send_security_mode_reject(LIBLTE_MME_EMM_CAUSE_UE_SECURITY_CAPABILITIES_MISMATCH);
-    return;
+    nas_log->console("Security Capabilities replay mismatch\n");
+    nas_log->error("Security Capabilities replay mismatch\n");
+    // send_security_mode_reject(LIBLTE_MME_EMM_CAUSE_UE_SECURITY_CAPABILITIES_MISMATCH);
+    //return;
   }
 
   // Reset counters (as per 24.301 5.4.3.2), only needed for initial security mode command
@@ -1435,9 +1493,10 @@ void nas::parse_security_mode_command(uint32_t lcid, unique_byte_buffer_t pdu)
   ctxt.integ_algo  = (INTEGRITY_ALGORITHM_ID_ENUM)sec_mode_cmd.selected_nas_sec_algs.type_of_eia;
 
   // Check capabilities
-  if (!eea_caps[ctxt.cipher_algo] || !eia_caps[ctxt.integ_algo]) {
-    nas_log->warning("Sending Security Mode Reject due to security capabilities mismatch\n");
-    send_security_mode_reject(LIBLTE_MME_EMM_CAUSE_UE_SECURITY_CAPABILITIES_MISMATCH);
+  if(!eea_caps[ctxt.cipher_algo] || !eia_caps[ctxt.integ_algo]) {
+    nas_log->console("Security capabilities mismatch\n");
+    nas_log->error("Security capabilities mismatch\n");
+    // send_security_mode_reject(LIBLTE_MME_EMM_CAUSE_UE_SECURITY_CAPABILITIES_MISMATCH);
     return;
   }
 
@@ -1450,14 +1509,14 @@ void nas::parse_security_mode_command(uint32_t lcid, unique_byte_buffer_t pdu)
       "Generating integrity check. integ_algo:%d, count_dl:%d, lcid:%d\n", ctxt.integ_algo, ctxt.rx_count, lcid);
 
   if (not integrity_check(pdu.get())) {
-    nas_log->warning("Sending Security Mode Reject due to integrity check failure\n");
-    send_security_mode_reject(LIBLTE_MME_EMM_CAUSE_MAC_FAILURE);
-    return;
+    nas_log->error("Integrity Check error in Security Mode Command\n");
+    nas_log->warning("Integrity Check error in Security Mode Command\n");
   }
+
+  tb->report_nas_security_mode_command(ctxt.integ_algo, ctxt.cipher_algo);
 
   ctxt.rx_count++;
 
-  LIBLTE_MME_SECURITY_MODE_COMPLETE_MSG_STRUCT sec_mode_comp = {};
   if (sec_mode_cmd.imeisv_req_present && LIBLTE_MME_IMEISV_REQUESTED == sec_mode_cmd.imeisv_req) {
     sec_mode_comp.imeisv_present    = true;
     sec_mode_comp.imeisv.type_of_id = LIBLTE_MME_MOBILE_ID_TYPE_IMEISV;
@@ -1514,10 +1573,10 @@ void nas::parse_service_reject(uint32_t lcid, unique_byte_buffer_t pdu)
   enter_emm_deregistered();
   reset_security_context();
 
-  // Send attach request after receiving service reject
-  pdu->clear();
-  gen_attach_request(pdu);
-  rrc->write_sdu(std::move(pdu));
+  // Send attach request after receiving service reject 
+  pdu->clear(); 
+  /* gen_attach_request(pdu.get());
+  rrc->write_sdu(std::move(pdu)); */
 }
 
 void nas::parse_esm_information_request(uint32_t lcid, unique_byte_buffer_t pdu)
@@ -1785,7 +1844,7 @@ void nas::gen_attach_request(srslte::unique_byte_buffer_t& msg)
   gen_pdn_connectivity_request(&attach_req.esm_msg);
 
   // GUTI or IMSI attach
-  if (have_guti && have_ctxt) {
+  if (have_guti && have_ctxt && !cfg.force_imsi_attach) {
     attach_req.tmsi_status_present      = true;
     attach_req.tmsi_status              = LIBLTE_MME_TMSI_STATUS_VALID_TMSI;
     attach_req.eps_mobile_id.type_of_id = LIBLTE_MME_EPS_MOBILE_ID_TYPE_GUTI;

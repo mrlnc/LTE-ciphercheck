@@ -35,24 +35,28 @@ typedef enum {
   CIPHERING_ALGORITHM_ID_128_EEA1,
   CIPHERING_ALGORITHM_ID_128_EEA2,
   CIPHERING_ALGORITHM_ID_128_EEA3,
+  CIPHERING_ALGORITHM_ID_EEA4,
+  CIPHERING_ALGORITHM_ID_EEA5,
+  CIPHERING_ALGORITHM_ID_EEA6,
+  CIPHERING_ALGORITHM_ID_EEA7,
   CIPHERING_ALGORITHM_ID_N_ITEMS,
 } CIPHERING_ALGORITHM_ID_ENUM;
-static const char ciphering_algorithm_id_text[CIPHERING_ALGORITHM_ID_N_ITEMS][20] = {"EEA0",
-                                                                                     "128-EEA1",
-                                                                                     "128-EEA2",
-                                                                                     "128-EEA3"};
+static const char ciphering_algorithm_id_text[CIPHERING_ALGORITHM_ID_N_ITEMS][20] = {
+    "EEA0", "128-EEA1", "128-EEA2", "128-EEA3", "EEA-spare-4", "EEA-spare-5", "EEA-spare-6", "EEA-spare-7"};
 
 typedef enum {
   INTEGRITY_ALGORITHM_ID_EIA0 = 0,
   INTEGRITY_ALGORITHM_ID_128_EIA1,
   INTEGRITY_ALGORITHM_ID_128_EIA2,
   INTEGRITY_ALGORITHM_ID_128_EIA3,
+  INTEGRITY_ALGORITHM_ID_EIA4,
+  INTEGRITY_ALGORITHM_ID_EIA5,
+  INTEGRITY_ALGORITHM_ID_EIA6,
+  INTEGRITY_ALGORITHM_ID_EIA7,
   INTEGRITY_ALGORITHM_ID_N_ITEMS,
 } INTEGRITY_ALGORITHM_ID_ENUM;
-static const char integrity_algorithm_id_text[INTEGRITY_ALGORITHM_ID_N_ITEMS][20] = {"EIA0",
-                                                                                     "128-EIA1",
-                                                                                     "128-EIA2",
-                                                                                     "128-EIA3"};
+static const char integrity_algorithm_id_text[INTEGRITY_ALGORITHM_ID_N_ITEMS][20] = {
+    "EIA0", "128-EIA1", "128-EIA2", "128-EIA3", "EIA-spare-4", "EIA-spare-5", "EIA-spare-6", "EIA-spare-7"};
 
 typedef enum {
   SECURITY_DIRECTION_UPLINK   = 0,

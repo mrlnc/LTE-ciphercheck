@@ -43,6 +43,7 @@ public:
   explicit nas(srslte::task_handler_interface* task_handler_);
   virtual ~nas() = default;
   void init(usim_interface_nas* usim_, rrc_interface_nas* rrc_, gw_interface_nas* gw_, const nas_args_t& args_);
+  void init(usim_interface_nas* usim_, rrc_interface_nas* rrc_, gw_interface_nas* gw_, testbench_interface_nas* tb_, const nas_args_t& args_);
   void stop();
   void run_tti();
 
@@ -63,6 +64,8 @@ public:
   // UE interface
   void start_attach_proc(srslte::proc_state_t* result, srslte::establishment_cause_t cause_) final;
   bool detach_request(const bool switch_off) final;
+  // Security Algorithm Testing
+  void enable_sec_algo(sec_algo_type_t type, uint index, bool enable) final;
 
   void plmn_search_completed(const rrc_interface_nas::found_plmn_t found_plmns[rrc_interface_nas::MAX_FOUND_PLMNS],
                              int                                   nof_plmns) final;
@@ -80,6 +83,7 @@ private:
   rrc_interface_nas*        rrc  = nullptr;
   usim_interface_nas*       usim = nullptr;
   gw_interface_nas*         gw   = nullptr;
+  testbench_interface_nas*  tb      = nullptr;
 
   nas_args_t cfg = {};
 
@@ -227,6 +231,7 @@ private:
   void enter_state(emm_state_t state_);
   void handle_airplane_mode_sim();
   void enter_emm_deregistered();
+  void report_attach_result(bool is_attached, uint8_t originating_msg);
 
   // security context persistence file
   bool read_ctxt_file(nas_sec_ctxt* ctxt);

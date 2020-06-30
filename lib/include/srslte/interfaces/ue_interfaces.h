@@ -49,6 +49,37 @@ namespace srsue {
 
 typedef enum { AUTH_OK, AUTH_FAILED, AUTH_SYNCH_FAILURE } auth_result_t;
 
+enum class key_type { k_rrc_enc, k_rrc_int, k_up_enc };
+typedef enum { EIA, EEA } sec_algo_type_t;
+
+// Testbench interface for main/stack
+class testbench_interface_stack
+{
+public:
+  virtual bool get_result()                                         = 0;
+  virtual bool is_finished()                                        = 0;
+  virtual bool is_connected()                                       = 0;
+  virtual uint start_testcase(uint8_t _eia_mask, uint8_t _eea_mask) = 0;
+};
+
+// Testbench interface for NAS
+class testbench_interface_nas
+{
+public:
+  virtual void report_nas()                                             = 0;
+  virtual void report_attach_accept()                                   = 0;
+  virtual void report_attach_reject(uint8_t _cause)                     = 0;
+  virtual void report_nas_security_mode_command(uint8_t _eia, uint8_t _eea) = 0;
+};
+
+// Testbench interface for RRC
+class testbench_interface_rrc
+{
+public:
+  virtual void report_rrc_key(key_type _type, uint8_t* _k) = 0;
+  virtual void report_rrc_security_mode_command(uint8_t _eia, uint8_t _eea) = 0;
+};
+
 // USIM interface for NAS
 class usim_interface_nas
 {
@@ -176,6 +207,7 @@ public:
   virtual void        paging_completed(bool outcome)                                    = 0;
   virtual std::string get_rb_name(uint32_t lcid)                                        = 0;
   virtual uint32_t    get_lcid_for_eps_bearer(const uint32_t& eps_bearer_id)            = 0;
+  virtual void        leave_connected()                                                 = 0;
 };
 
 // RRC interface for PDCP
@@ -224,6 +256,9 @@ class nas_interface_ue
 public:
   virtual void start_attach_proc(srslte::proc_state_t* proc_result, srslte::establishment_cause_t cause_) = 0;
   virtual bool detach_request(const bool switch_off)                                                      = 0;
+
+  // Security Algorithm Testing
+  virtual void enable_sec_algo(sec_algo_type_t type, uint index, bool enable) = 0;
 };
 
 // PDCP interface for RRC
