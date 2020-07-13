@@ -63,18 +63,11 @@ tx_gain = 80
 # Payload Protocol = nas-eps.
 #
 # enable:       Enable MAC layer packet captures (true/false)
-# filename:     File path to use for MAC packet captures
 # nas_enable:   Enable NAS layer packet captures (true/false)
-# nas_filename: File path to use for NAS packet captures
 #####################################################################
 [pcap]
 enable = true
-# basename for MAC PCAP
-# one PCAP per testcase, so consider a dedicated directory within /tmp
-filename = /tmp/results/pcap/ue
 nas_enable = true
-# basename for NAS PCAP
-nas_filename = /tmp/results/pcap/nas
 
 #####################################################################
 # Log configuration
@@ -91,17 +84,14 @@ nas_filename = /tmp/results/pcap/nas
 # Logging layers: rf, phy, mac, rlc, pdcp, rrc, nas, gw, usim, stack, all
 # Logging levels: debug, info, warning, error, none
 #
-# filename: File path to use for log output. Can be set to stdout
-#           to print logs to standard output
 # file_max_size: Maximum file size (in kilobytes). When passed, multiple files are created.
 #                If set to negative, a single log file will be created.
 #####################################################################
 [log]
+results_dir = /tmp/results
 all_level = warning
 phy_lib_level = none
 all_hex_limit = 32
-filename = /tmp/results/log/ue.log
-results_filename = /tmp/results/log/results.log
 file_max_size = -1
 
 #####################################################################

@@ -31,6 +31,7 @@
 #include "srsue/hdr/ue.h"
 #include <boost/program_options.hpp>
 #include <boost/program_options/parsers.hpp>
+#include <boost/filesystem.hpp>
 #include <iostream>
 #include <iomanip>
 #include <pthread.h>
@@ -59,6 +60,7 @@ static metrics_stdout* metrics_screen = nullptr;
  *  Program arguments processing
  ***********************************************************************/
 string config_file;
+string results_dir;
 bool   fast_test;
 bool   always_test_conn;
 
@@ -132,9 +134,7 @@ static int parse_args(all_args_t* args, int argc, char* argv[])
     ("nas.eea",               bpo::value<string>(&args->stack.nas.eea)->default_value("0,1,2,3"),  "List of ciphering algorithms included in UE capabilities")
 
     ("pcap.enable", bpo::value<bool>(&args->stack.pcap.enable)->default_value(false), "Enable MAC packet captures for wireshark")
-    ("pcap.filename", bpo::value<string>(&args->stack.pcap.filename)->default_value("ue.pcap"), "MAC layer capture filename")
     ("pcap.nas_enable",   bpo::value<bool>(&args->stack.pcap.nas_enable)->default_value(false), "Enable NAS packet captures for wireshark")
-    ("pcap.nas_filename", bpo::value<string>(&args->stack.pcap.nas_filename)->default_value("ue_nas.pcap"), "NAS layer capture filename (useful when NAS encryption is enabled)")
 
     ("gui.enable", bpo::value<bool>(&args->gui.enable)->default_value(false), "Enable GUI plots")
     ("fast-test", bpo::value<bool>(&fast_test)->default_value(false), "Fast tests; skip those with AES or Snow3G")
@@ -164,8 +164,7 @@ static int parse_args(all_args_t* args, int argc, char* argv[])
     ("log.all_level", bpo::value<string>(&args->log.all_level)->default_value("info"), "ALL log level")
     ("log.all_hex_limit", bpo::value<int>(&args->log.all_hex_limit)->default_value(32), "ALL log hex dump limit")
 
-    ("log.filename", bpo::value<string>(&args->log.filename)->default_value("/tmp/ue.log"), "Log filename")
-    ("log.results_filename", bpo::value<string>(&args->log.results_filename)->default_value("/tmp/sec_results.log"), "Sec Algo Test Results filename")
+    ("log.results_dir", bpo::value<string>(&results_dir)->default_value("/tmp/results"), "Results directory for LTE Ciphercheck")
     ("log.file_max_size", bpo::value<int>(&args->log.file_max_size)->default_value(-1), "Maximum file size (in kilobytes). When passed, multiple files are created. Default -1 (single file)")
 
     ("usim.mode", bpo::value<string>(&args->stack.usim.mode)->default_value("soft"), "USIM mode (soft or pcsc)")
@@ -456,8 +455,7 @@ static int parse_args(all_args_t* args, int argc, char* argv[])
 
   // if no config file given, check users home path
   if (!vm.count("config_file")) {
-
-    if (!config_exists(config_file, "ue.conf")) {
+    if (!config_exists(config_file, "ciphercheck.conf")) {
       cout << "Failed to read UE configuration file " << config_file << " - exiting" << endl;
       return SRSLTE_ERROR;
     }
@@ -554,7 +552,6 @@ static int parse_args(all_args_t* args, int argc, char* argv[])
       args->stack.log.stack_hex_limit = args->log.all_hex_limit;
     }
   }
-
   return SRSLTE_SUCCESS;
 }
 
@@ -651,6 +648,36 @@ int main(int argc, char* argv[])
   if (parse_args(&args, argc, argv) != SRSLTE_SUCCESS) {
     return SRSLTE_ERROR;
   };
+
+  // create the results directory if necessary
+  boost::filesystem::path p(results_dir);
+  boost::filesystem::create_directory(p);
+  if (!boost::filesystem::exists(p)) {
+    cout << "Cannot create directory: " << p << endl;
+  } else {
+    cout << "Writing results to: "  << p << endl;
+  }
+
+  string log_dir = "log";
+  string pcap_dir = "pcap";
+
+  // for ciphercheck: we got the results directory, now fill in all the other required filenames
+  args.log.filename = results_dir +"/" +log_dir +"/ue.log";
+  args.log.results_filename = results_dir +"/"+ log_dir +"/results.log";
+  // just filename base, will later be completed with filename extension
+  args.stack.pcap.filename = results_dir +"/"+ pcap_dir +"/mac";
+  args.stack.pcap.nas_filename = results_dir +"/"+ pcap_dir +"/nas";
+
+  p = boost::filesystem::path(results_dir +"/" +log_dir);
+  boost::filesystem::create_directory(p);
+  if (!boost::filesystem::exists(p)) {
+    cout << "Cannot create directory: " << p << endl;
+  }
+  p = boost::filesystem::path(results_dir +"/" +pcap_dir);
+  boost::filesystem::create_directory(p);
+  if (!boost::filesystem::exists(p)) {
+    cout << "Cannot create directory: " << p << endl;
+  }
 
   srslte::logger_file   logger_file;
   srslte::logger_file   logger_file_results;
@@ -810,7 +837,9 @@ int main(int argc, char* argv[])
   metricshub.stop();
   metrics_file.stop();
   ue.stop();
-  cout << "---  exiting  ---" << endl;
+
+  cout << "LTE-Ciphercheck -- FINISHED." << endl;
+  cout << "Results written to " << args.log.results_filename << endl;
 
   return SRSLTE_SUCCESS;
 }
