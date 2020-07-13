@@ -826,8 +826,8 @@ int main(int argc, char* argv[])
                           bitset<8>(eia_mask).to_string().c_str(),
                           bitset<8>(eea_mask).to_string().c_str());
       } else {
-        cout << tb.get_summary() << endl;
-        log_results.info("%s", tb.get_summary().c_str());
+        cout << tb.get_current_tc_summary() << endl;
+        log_results.info("%s", tb.get_current_tc_summary().c_str());
       }
     }
   }
@@ -837,6 +837,8 @@ int main(int argc, char* argv[])
   metricshub.stop();
   metrics_file.stop();
   ue.stop();
+
+  tb.get_summary();
 
   cout << "LTE-Ciphercheck -- FINISHED." << endl;
   cout << "Results written to " << args.log.results_filename << endl;

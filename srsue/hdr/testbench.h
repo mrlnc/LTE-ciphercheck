@@ -5,10 +5,25 @@
 #include "srslte/interfaces/ue_interfaces.h"
 #include "srslte/common/security.h"
 #include <bitset>
+#include <mutex>
 #include <map>
 #include <string>
 
 namespace srsue {
+
+typedef struct summary_s {
+  // TODO PCAPs and alike for easy summary printing
+
+  // insecure ciphers from SMC: either NULL, or SPARE (due to bugs in BS implementation)
+  bool insecure_nas_eea_choice = false;
+  bool insecure_nas_eia_choice = false;
+  bool insecure_rrc_eea_choice = false;
+  bool insecure_rrc_eia_choice = false;
+  bool spare_values = false;
+  // just any kind of reaction from the network?
+  bool success = false;
+  bool is_interesting = false;
+} summary_t;
 
 /* testbench: collect the results of all testcases
  */
@@ -38,6 +53,9 @@ protected:
 
     srslte::log_filter* log;
 
+    summary_t summary;
+    void update_summary();
+
     /* NAS */
     bool got_nas_security_mode_command = false;
     bool got_attach_accept             = false;
@@ -58,6 +76,7 @@ protected:
 
     /* stack */
     bool is_finished();
+    bool is_interesting();
     bool is_connected();
 
     /* NAS */
@@ -71,8 +90,9 @@ protected:
     void report_rrc_security_mode_command(uint8_t _eia, uint8_t _eea);
   };
 
-  uint                                        current_testcase_id; // TODO locking
-  std::map<uint /* testcase id */, testcase*> testcases;           // TODO locking
+  uint                                        current_testcase_id;
+  std::map<uint /* testcase id */, testcase*> testcases;
+  std::mutex testcases_mutex;
 
   srslte::log_filter* log;
 
@@ -85,6 +105,7 @@ public:
   bool set_pcap(std::string nas_pcap, std::string mac_pcap);
 
   std::string get_summary();
+  std::string get_current_tc_summary();
 
   /* stack / main() interface */
   bool get_result();

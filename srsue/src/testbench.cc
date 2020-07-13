@@ -5,12 +5,15 @@ testbench::testbench(srslte::log_filter* _log) : current_testcase_id(0), log(_lo
 testbench::~testbench()
 {
   log->debug("DTOR called\n");
+  const std::lock_guard<std::mutex> lock(testcases_mutex);
   for (auto t : testcases) {
     delete t.second;
   }
 }
 
 bool testbench::set_pcap(std::string nas_pcap, std::string mac_pcap) {
+  const std::lock_guard<std::mutex> lock(testcases_mutex);
+
   if (testcases.find(current_testcase_id) == testcases.end()) {
     log->error("set_pcap: no testcase %i available.\n", current_testcase_id);
     return false;
@@ -25,6 +28,8 @@ bool testbench::set_pcap(std::string nas_pcap, std::string mac_pcap) {
 
 uint testbench::start_testcase(uint8_t _eia_mask, uint8_t _eea_mask)
 {
+  const std::lock_guard<std::mutex> lock(testcases_mutex);
+
   current_testcase_id += 1;
   log->info("New Testcase %i with EIA %s EEA %s\n",
             current_testcase_id,
@@ -41,6 +46,8 @@ bool testbench::get_result()
 
 bool testbench::is_finished()
 {
+  const std::lock_guard<std::mutex> lock(testcases_mutex);
+
   if (testcases.find(current_testcase_id) == testcases.end()) {
     log->error("is_finished: no testcase %i available.\n", current_testcase_id);
     return false;
@@ -54,6 +61,8 @@ bool testbench::is_finished()
 
 bool testbench::is_connected()
 {
+  const std::lock_guard<std::mutex> lock(testcases_mutex);
+
   if (testcases.find(current_testcase_id) == testcases.end()) {
     log->error("is_connected: no testcase %i available.\n", current_testcase_id);
     return false;
@@ -65,7 +74,9 @@ bool testbench::is_connected()
   return false;
 }
 
-std::string testbench::get_summary() {
+std::string testbench::get_current_tc_summary() {
+  const std::lock_guard<std::mutex> lock(testcases_mutex);
+
   if (testcases.find(current_testcase_id) == testcases.end()) {
     log->error("get_summary: no testcase %i available.\n", current_testcase_id);
     return std::string("error");
@@ -77,6 +88,26 @@ std::string testbench::get_summary() {
   return std::string("error");
 }
 
+std::string testbench::get_summary() {
+  const std::lock_guard<std::mutex> lock(testcases_mutex);
+  log->info("############ SUMMARY ############\n");
+  log->info("# Executed testcases: %lu\n", testcases.size());
+  log->info("# Following testcases require manual inspection: \n");
+
+  for (auto it = testcases.begin(); it != testcases.end(); it++) {
+    if (it->second->is_interesting()) {
+      log->info("%s", it->second->get_summary().c_str());
+    }
+  }
+  // TODO iterate through TCs and print some summary, like
+  // 123 TCs processed
+  // X require manual inspection:
+  // TC EIA 0x001...
+  // Reason: NULL
+  // PCAPs: 
+  return std::string("");
+}
+
 /* NAS interface */
 void testbench::report_nas(){
 
@@ -84,6 +115,8 @@ void testbench::report_nas(){
 
 void testbench::report_attach_accept()
 {
+  const std::lock_guard<std::mutex> lock(testcases_mutex);
+
   if (testcases.find(current_testcase_id) == testcases.end()) {
     log->error("report_attach_accept: no testcase %i available.\n", current_testcase_id);
     return;
@@ -96,6 +129,8 @@ void testbench::report_attach_accept()
 
 void testbench::report_attach_reject(uint8_t _cause)
 {
+  const std::lock_guard<std::mutex> lock(testcases_mutex);
+
   if (testcases.find(current_testcase_id) == testcases.end()) {
     log->error("report_attach_reject: no testcase %i available.\n", current_testcase_id);
     return;
@@ -108,6 +143,8 @@ void testbench::report_attach_reject(uint8_t _cause)
 
 void testbench::report_nas_security_mode_command(uint8_t _eia, uint8_t _eea)
 {
+  const std::lock_guard<std::mutex> lock(testcases_mutex);
+
   if (testcases.find(current_testcase_id) == testcases.end()) {
     log->error("report_nas_security_mode_command: no testcase %i available.\n", current_testcase_id);
     return;
@@ -120,6 +157,8 @@ void testbench::report_nas_security_mode_command(uint8_t _eia, uint8_t _eea)
 
 /* RRC interface */
 void testbench::report_rrc_key(key_type _type, uint8_t* _k) {
+  const std::lock_guard<std::mutex> lock(testcases_mutex);
+
   if (testcases.find(current_testcase_id) == testcases.end()) {
     log->error("report_rrc_key: no testcase %i available.\n", current_testcase_id);
     return;
@@ -132,6 +171,8 @@ void testbench::report_rrc_key(key_type _type, uint8_t* _k) {
 
 void testbench::report_rrc_security_mode_command(uint8_t _eia, uint8_t _eea)
 {
+  const std::lock_guard<std::mutex> lock(testcases_mutex);
+
   if (testcases.find(current_testcase_id) == testcases.end()) {
     log->error("report_rrc_security_mode_command: no testcase %i available.\n", current_testcase_id);
     return;
@@ -150,6 +191,8 @@ testbench::testcase::testcase(srslte::log_filter* _log, uint _id, uint8_t _eia_m
     eia_caps[i] = (_eia_mask & (0b1 << i)) != 0;
     eea_caps[i] = (_eea_mask & (0b1 << i)) != 0;
   }
+  bzero(&summary, sizeof(summary_t));
+
   /*     eia_caps |= eia_caps[0] ? 0b0001 : 0;
       eia_caps |= eia_caps[1] ? 0b0010 : 0;
       eia_caps |= eia_caps[2] ? 0b0100 : 0;
@@ -159,7 +202,13 @@ testbench::testcase::testcase(srslte::log_filter* _log, uint _id, uint8_t _eia_m
       eea_caps |= eea_caps[1] ? 0b0010 : 0;
       eea_caps |= eea_caps[2] ? 0b0100 : 0;
       eea_caps |= eea_caps[3] ? 0b1000 : 0; */
+  update_summary();
 };
+
+bool testbench::testcase::is_interesting()
+{
+  return summary.is_interesting;
+}
 
 bool testbench::testcase::is_finished()
 {
@@ -215,6 +264,8 @@ std::string testbench::testcase::mme_cause_str(uint cause) {
 void testbench::testcase::set_pcap(std::string _nas_pcap, std::string _mac_pcap) {
   nas_pcap = _nas_pcap;
   mac_pcap = _mac_pcap;
+
+  update_summary();
 }
 
 void testbench::testcase::report_nas(){};
@@ -222,11 +273,13 @@ void testbench::testcase::report_attach_accept()
 {
   log->info("Testcase %u got Attach Accept\n", id);
   got_attach_accept = true;
+  update_summary();
 };
 void testbench::testcase::report_attach_reject(uint8_t _cause)
 {
   log->info("Testcase %u got Attach Reject, cause: %s\n", id, mme_cause_str(_cause).c_str());
   got_attach_reject = true;
+  update_summary();
 };
 void testbench::testcase::report_nas_security_mode_command(uint8_t _eia, uint8_t _eea)
 {
@@ -237,6 +290,7 @@ void testbench::testcase::report_nas_security_mode_command(uint8_t _eia, uint8_t
   nas_eia                       = _eia;
   nas_eea                       = _eea;
   got_nas_security_mode_command = true;
+  update_summary();
 };
 void testbench::testcase::report_rrc_security_mode_command(uint8_t _eia, uint8_t _eea)
 {
@@ -247,6 +301,7 @@ void testbench::testcase::report_rrc_security_mode_command(uint8_t _eia, uint8_t
   rrc_eia                       = _eia;
   rrc_eea                       = _eea;
   got_rrc_security_mode_command = true;
+  update_summary();
 };
 
 void testbench::testcase::report_rrc_key(key_type _type, uint8_t* _k) {
@@ -269,9 +324,27 @@ void testbench::testcase::report_rrc_key(key_type _type, uint8_t* _k) {
     default:
       log->error("Error setting key, testcase %i\n", id);
   }
+  update_summary();
 }
 
+void testbench::testcase::update_summary() {
+    summary.insecure_nas_eea_choice = got_nas_security_mode_command && ( nas_eea == 0 || nas_eea > 3 );
+    summary.insecure_nas_eia_choice = got_nas_security_mode_command && ( nas_eia == 0 || nas_eia > 3 );
+    summary.insecure_rrc_eea_choice = got_rrc_security_mode_command && ( rrc_eea == 0 || rrc_eea > 3 );
+    summary.insecure_rrc_eia_choice = got_rrc_security_mode_command && ( rrc_eia == 0 || rrc_eia > 3 );
+
+    summary.spare_values = (nas_eia > 3 || nas_eea > 3 || rrc_eia > 3 || rrc_eea > 3); 
+    summary.success =  (got_attach_accept || got_rrc_security_mode_command || got_nas_security_mode_command);
+
+    summary.is_interesting = summary.insecure_nas_eea_choice || summary.insecure_nas_eia_choice || \
+                              summary.insecure_rrc_eea_choice || summary.insecure_rrc_eia_choice || \
+                              summary.spare_values;
+}
+
+// TODO fix this mess
 std::string testbench::testcase::get_summary() {
+    update_summary();
+
     std::stringstream ss;
     // if either AES or Snow3G are included we'd expect a secure, successful connection
     bool has_secure_capabilities = ( eia_caps[1] || eia_caps[2] )
@@ -317,35 +390,26 @@ std::string testbench::testcase::get_summary() {
       ss << "no" << std::endl;
     }
 
-    // check if anything fishy
-    // insecure ciphers from SMC: either NULL, or SPARE (due to bugs in BS implementation)
-    bool insecure_eea_choice = ( nas_eea == 0 || rrc_eea == 0 || nas_eea > 3 || rrc_eea > 3);
-    bool insecure_eia_choice = ( nas_eia == 0 || rrc_eia == 0 || nas_eia > 3 || rrc_eia > 3 );
-    bool spare_values = (nas_eia > 3 || nas_eea > 3 || rrc_eia > 3 || rrc_eea > 3); 
-
-    // just any kind of reaction from the network?
-    bool success =  (got_attach_accept || got_rrc_security_mode_command || got_nas_security_mode_command);
-
     ss << "Potential issues: " << std::endl;
     ss << "  * Insecure EEA ";
-    if (success && insecure_eea_choice) {
+    if (summary.success && (summary.insecure_nas_eea_choice || summary.insecure_rrc_eea_choice)) {
       ss << "detected! ISSUE!" << std::endl;
     } else {
       ss << "not detected." << std::endl;
     }
     ss << "  * Insecure EIA ";
-    if (success && insecure_eia_choice) {
+    if (summary.success && (summary.insecure_nas_eia_choice || summary.insecure_rrc_eia_choice)) {
       ss << "detected! ISSUE!" << std::endl;
     } else {
       ss << "not detected." << std::endl;
     }
     ss << "  * Spare Values ";
-    if (success && spare_values) {
+    if (summary.success && summary.spare_values) {
       ss << "detected! ISSUE!" << std::endl;
     } else {
       ss << "not detected." << std::endl;
     }
-    // reject despite secure config?
+    // TODO reject despite secure config?
 
     return ss.str();
 }
