@@ -1,11 +1,32 @@
 This tool quickly tests LTE networks for their cipher support. It's for use by telecom operators only.
 
+
+Example output:
+```
+$ sudo ./srsue/src/srsue --fast-test true ../srsue/ciphercheck.conf
+...
+########################################################
+ Testcase Finished. EIA: 00001111 EEA: 00001110
+ Summary: 
+UE Security Capabilities: Encryption Integrity
+                 NULL   :     -          x    
+                 Snow3G :     x          x    
+                 AES    :     x          x    
+                 ZUC    :     x          x    
+Received Messages: 
+  * NAS Security Mode Command: EEA=128-EEA2, EIA=128-EIA2
+  * RRC Security Mode Command: EEA=128-EEA2, EIA=128-EIA2
+  * Attach Accept
+Potential issues: 
+ -- no issues -- 
+```
+
 ## LTE Security Disabled—Misconfiguration in Commercial Networks.
 
 Check out our research paper and talk at WiSec 2019 ([Paper](./img/wisec19-final123.pdf), [Talk](./img/WiSec19-LTE_Security_Disabled.pdf)):
 > Merlin Chlosta, David Rupprecht, Thorsten Holz, and Christina Pöpper. 2019. LTE Security Disabled—Misconfiguration in Commercial Networks. In 12th ACM Conference on Security and Privacy in Wireless and Mobile Networks (WiSec ’19), May 15–17, 2019, Miami, FL, USA. ACM, New York, NY, USA, 6 pages. https://doi.org/10.1145/3317549.3324927
 
-Contact me at [merlin.chlosta+eia0@rub.de](mailto:merlin.chlosta+eia0@rub.de) for inquiries.
+You can reach me at [merlin.chlosta+eia0@rub.de](mailto:merlin.chlosta+eia0@rub.de), always happy for feedback!
 
 # Encryption in LTE Networks
 
@@ -21,7 +42,7 @@ Networks and smartphones must support AES and Snow3G. ZUC is optional. The NULL 
 
 ## Impact of Misconfigurations
 
-If a network is poorly configured, man-in-the-middle attacks become trivial. If a network accepts unprotected connections, attackers can impersonate benign users. That means, the attacker get's an IP address, while the unaware user pays for the data.
+If a network is poorly configured and allows NULL algorithms, man-in-the-middle attacks become trivial. If a network accepts unprotected connections, attackers can impersonate benign users. That means, the attacker get's an IP address, while the unaware user pays for the data.
 
 ![MitM](./img/mitm.png)
 
@@ -33,84 +54,108 @@ The whole setup looks like this:
 
 ![Setup](./img/system_overview.png)
 
-We typically use Ettus USRP B210 as Software Defined Radio, and the smartcard readers that are built into the Dell standard keyboards.
+We use Ettus USRP B210 as Software Defined Radio, and the smartcard readers that are built into the Dell standard keyboards. Any other SDR that is supported by srsLTE will work, too.
 
-First, build the docker image:
+## Installation
+
+You can install LTE-ciphercheck locally, just like srsLTE.
+
+Dependencies:
 ```console
-host:~$ git clone https://github.com/mrlnc/LTE-ciphercheck.git
-host:~$ cd LTE-ciphercheck
-host:LTE-ciphercheck$ docker build -t LTE-ciphercheck .
+sudo apt install git cmake libfftw3-dev libmbedtls-dev libboost-program-options-dev libconfig++-dev libsctp-dev libuhd-dev libpcsclite-dev pcsc-tools pcscd
 ```
 
-Run tests with the `start_test.sh` script, that feeds the required parameters to the docker image.
-
+Build:
+```console
+git clone https://github.com/mrlnc/LTE-ciphercheck
+cd LTE-ciphercheck
+mkdir build && cd build
+cmake ..
+make -j `nproc` srsue
 ```
-host:LTE-ciphercheck$ ./start-test.sh --dl-earfcn 123 --apn internet --imei <IMEI of your smartphone>
+
+# Configuration
+
+Create a config file:
+```config
+cp srsue/ciphercheck.conf.example srsue/ciphercheck.conf
 ```
 
-This executes a minimal test set with only a few vulnerable cases. 
+Fill out all blanks with the proper values. These are the minimum required parameters. Your network may require additional settings, such as APN authentication.
+```
+dl_earfcn = ${DL_EARFCN}
+imei = ${IMEI}
+apn = ${APN}
+```
 
 ## Advanced Configuration
 
-Basically, this software is just [srsLTE](https://github.com/srsLTE/srsLTE) with minor changes. See the [srsLTE README](https://github.com/srsLTE/srsLTE/blob/master/README.md) for detailed build instructions, and [www.srslte.com](srslte.com) for documentation and guides.
+LTE-ciphercheck build with [srsLTE](https://github.com/srsLTE/srsLTE) with minor changes. See the [srsLTE README](https://github.com/srsLTE/srsLTE/blob/master/README.md) for detailed build instructions, and [www.srslte.com](srslte.com) for documentation and guides.
+
+# Usage
+
+Run LTE-Ciphercheck:
+```
+cd build
+sudo ./srsue/src/srsue --fast-test true ../srsue/ciphercheck.conf
+```
+
+The option `--fast-test` will skip all testcases that have AES or Snow3G enabled -- probably, the network will just select 
+
+By default, all results (log files and PCAPs) are placed in `/tmp/results/`.
+
 
 # Results
 
-After running, the results are stored in a temporary directory:
-```
-host:LTE-ciphercheck$ ./start-test.sh --dl-earfcn 123 --apn internet --imei <IMEI of your smartphone>
-...
-Found Cell:  Mode=FDD, PCI=313, PRB=100, Ports=2, CFO=3.4 KHz
-Found PLMN:  Id=26201, TAC=65349
-...
----  exiting  ---
-Started 2020-03-30_11:38, finished 2020-03-30_11:40
-Results written to /tmp/tmp.R7TrLy872Q on host.
-```
-
-```
-host $ ls /tmp/tmp.R7TrLy872Q
-config  log  pcap
-```
-
-The main result log file is `log/results.log`.
+After running, the results are stored in `/tmp/results`. The main result log file is `log/results.log`.
 
 ## Accepted Cipher
 
 ```
-09:38:44.748108 [Main  ] [I] New Testcase 1 with EIA 11111111 EEA 11111111
-09:38:45.750189 [Main  ] [I] Testcase 1 got NAS Security Mode Command. Integrity: 128-EIA2, Ciphering: 128-EEA2
-09:38:45.906163 [Main  ] [I] Testcase 1 got RRC Security Mode Command. Integrity: 128-EIA2, Ciphering: 128-EEA2
-09:38:45.906188 [Main  ] [I] RRC encryption key - k_rrc_enc
-             0000: 6c 33 eb 8d f0 0e 1e cf ee 5d ef c4 23 fd 8a 97
-             0010: 09 4a de 99 78 30 24 39 e0 fd b8 47 d8 ac d0 9e
-09:38:45.906205 [Main  ] [I] RRC integrity key - k_rrc_int
-             0000: 7b 53 0b 3c 27 ff 61 05 82 60 c7 70 aa 32 bf 0e
-             0010: 47 32 47 f2 a0 4d 3a 45 e8 c9 65 b8 bd 76 07 23
-09:38:45.906213 [Main  ] [I] UP encryption key - k_up_enc
-             0000: 3e 3e 4c 4e bb d3 23 bc 52 de 3a 9d a8 a9 44 c1
-             0010: 67 64 84 29 3c f7 7e 75 dc 3b 80 2a 6e 39 42 da
-09:38:45.910286 [Main  ] [I] Testcase 1 got Attach Accept
+10:31:58.928076 [Main] [I] New Testcase 2 with EIA 00001111 EEA 00001111
+10:32:00.039133 [Main] [I] Testcase 2 got NAS Security Mode Command. Integrity: 128-EIA2, Ciphering: 128-EEA2
+10:32:00.574756 [Main] [I] Testcase 2 got RRC Security Mode Command. Integrity: 128-EIA2, Ciphering: 128-EEA2
+10:32:00.574806 [Main] [I] RRC encryption key - k_rrc_enc
+             0000: 7d a9 26 c6 c9 6c 27 af 34 f5 e4 0f b0 47 f5 2f 
+             0010: 4a 1a c4 71 ed f4 bc 43 c1 a6 d5 f7 b4 a4 55 cd 
+10:32:00.574813 [Main] [I] RRC integrity key - k_rrc_int
+             0000: c0 de c2 df 3a 2c 08 b1 76 fc d2 c5 cc 9d 11 31 
+             0010: 24 3a e3 b5 79 2a 34 95 cc 68 2d 3a 9e 16 1b 87 
+10:32:00.574816 [Main] [I] UP encryption key - k_up_enc
+             0000: f3 0d 8d e4 9b 4a 42 80 ae 86 90 8a ec 32 4c 19 
+             0010: 8d 8e cc e2 08 ff 0e 12 3b 49 ae 2d 01 9d 1d 68 
+10:32:00.588104 [Main] [I] Testcase 2 got Attach Accept
+10:32:01.678156 [Main] [I] UE Security Capabilities: Encryption Integrity
+                 NULL   :     x          x    
+                 Snow3G :     x          x    
+                 AES    :     x          x    
+                 ZUC    :     x          x    
+Received Messages: 
+  * NAS Security Mode Command: EEA=128-EEA2, EIA=128-EIA2
+  * RRC Security Mode Command: EEA=128-EEA2, EIA=128-EIA2
+  * Attach Accept
+Potential issues: 
+ -- no issues -- 
 ```
-
-The ciphers here are set to `11111111` -- just everything enabled. This is a connectivity check. The script always performs a connectivty check before running the test case, to make sure everything still works.
-
-We can see here:
-* `NAS Security Mode Command`: the MME accepts the selected ciphers
-* `RRC Security Mode Command`: the eNodeB accepts them, too
-* Security Keys (for reading the RRC PCAPs)
-* `Attach Accept`: the Attach procedure has finished, we were assigned an IP address
+ RRC keys are useful for reading the MAC-layer PCAP with encrypted PDCP.
 
 ## Rejected Cipher
 
 ```
-10:14:58.912488 [Main  ] [I] New Testcase 44 with EIA 00001001 EEA 00000001
-10:14:59.390112 [Main  ] [I] Testcase 44 got Attach Reject, cause: MME_EMM_CAUSE_PROTOCOL_ERROR_UNSPECIFIED
+09:09:58.797989 [Main] [I] New Testcase 15 with EIA 00001001 EEA 00000001
+09:09:59.745830 [Main] [I] Testcase 15 got Attach Reject, cause: MME_EMM_CAUSE_PROTOCOL_ERROR_UNSPECIFIED
+09:10:00.833074 [Main] [I] UE Security Capabilities: Encryption Integrity
+                 NULL   :     x          x    
+                 Snow3G :     -          -    
+                 AES    :     -          -    
+                 ZUC    :     -          x    
+Received Messages: 
+  * Attach Reject
+Potential issues: 
+ -- no issues -- 
 ```
 
-In this test case, the cipher selection for integrity protection is 00001001, that is, EIA-ZUC (0b1000) and EIA-NULL (0b0001) only. For encryption, only NULL (0b0001) is allowed.
-
-The network should not accept such configuration. In this example, the network is properly configured and rejects the connection.
+In this test case, the cipher selection for integrity protection is 00001001, that is, EIA-ZUC (0b1000) and EIA-NULL (0b0001) only. For encryption, only NULL (0b0001) is allowed. The network should not accept such configuration. In this example, the network is properly configured and rejects the connection.
 
 # Testing Procedure
 
