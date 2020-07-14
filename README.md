@@ -6,19 +6,23 @@ Example output:
 $ sudo ./srsue/src/srsue --fast-test true ../srsue/ciphercheck.conf
 ...
 ########################################################
- Testcase Finished. EIA: 00001111 EEA: 00001110
+ Testcase Finished. EIA: 00001111 EEA: 00001010
  Summary: 
 UE Security Capabilities: Encryption Integrity
                  NULL   :     -          x    
                  Snow3G :     x          x    
-                 AES    :     x          x    
+                 AES    :     -          x    
                  ZUC    :     x          x    
 Received Messages: 
-  * NAS Security Mode Command: EEA=128-EEA2, EIA=128-EIA2
-  * RRC Security Mode Command: EEA=128-EEA2, EIA=128-EIA2
+  * NAS Security Mode Command: EEA=EEA0, EIA=128-EIA1
+  * RRC Security Mode Command: EEA=EEA0, EIA=128-EIA2
   * Attach Accept
 Potential issues: 
- -- no issues -- 
+  * Insecure ciphering algorithm on NAS: EEA0
+  * Insecure ciphering algorithm on RRC: EEA0
+  * Security Capabilities mismatch in NAS Security Mode Command: EEA=EEA0, EIA=128-EIA1
+  * Security Capabilities mismatch in RRC Security Mode Command: EEA=EEA0, EIA=128-EIA2
+  * Integrity algorithm mismatch between NAS (128-EIA1) and RRC (128-EIA2)
 ```
 
 ## LTE Security Disabled—Misconfiguration in Commercial Networks.
