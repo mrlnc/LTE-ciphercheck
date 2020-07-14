@@ -88,9 +88,11 @@ imei = ${IMEI}
 apn = ${APN}
 ```
 
-## Advanced Configuration
+## Advanced Configuration & ZMQ
 
 LTE-ciphercheck build with [srsLTE](https://github.com/srsLTE/srsLTE) with minor changes. See the [srsLTE README](https://github.com/srsLTE/srsLTE/blob/master/README.md) for detailed build instructions, and [www.srslte.com](srslte.com) for documentation and guides.
+
+Note that for local testing without radio hardware, you can use the [ZMQ support in srsLTE.](https://docs.srslte.com/en/latest/app_notes/source/zeromq/source/)
 
 # Usage
 
