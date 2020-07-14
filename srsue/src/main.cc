@@ -819,13 +819,16 @@ int main(int argc, char* argv[])
         attempt++;
       } while (!tb.is_finished() && running && attempt <= max_attempt);
       if (!tb.is_finished()) {
-        cout << "No result after " << attempt << " tries, aborting testcase EIA: " << bitset<8>(eia_mask)
-             << " EEA: " << bitset<8>(eea_mask) << endl;
+        cout << "No result after " << attempt << " tries, aborting testcase EIA: " << bitset<8>(eia_mask).to_string()
+             << " EEA: " << bitset<8>(eea_mask).to_string() << endl;
         log_results.error("No result after %i tries, aborting. Check manually! EIA: %s EEA: %s\n",
                           attempt,
                           bitset<8>(eia_mask).to_string().c_str(),
                           bitset<8>(eea_mask).to_string().c_str());
       } else {
+        cout << "########################################################" << endl;
+        cout << " Testcase Finished. EIA: " << bitset<8>(eia_mask) << " EEA: " << bitset<8>(eea_mask) << endl;
+        cout << " Summary: "<< endl;
         cout << tb.get_current_tc_summary() << endl;
         log_results.info("%s", tb.get_current_tc_summary().c_str());
       }

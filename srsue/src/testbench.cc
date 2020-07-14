@@ -350,64 +350,44 @@ std::string testbench::testcase::get_summary() {
     bool has_secure_capabilities = ( eia_caps[1] || eia_caps[2] )
                                 && ( eea_caps[1] || eea_caps[2] );
 
-    ss << "EEA: " << std::bitset<8>(eea_caps) << ", EIA: " << std::bitset<8>(eia_caps) << std::endl
-       << "NAS PCAP: " << nas_pcap << std::endl
-       << "MAC PCAP: " << mac_pcap << std::endl;
+    // TODO learn how to work with CLI…
+    ss << "UE Security Capabilities: Encryption Integrity" << std::endl;
+ // ss << "              NULL   :     x          -    "
+    ss << "                 NULL   :     "<< (eea_caps[0]? "x":"-") <<"          "<< (eia_caps[0]? "x":"-") <<"    " << std::endl;
+    ss << "                 Snow3G :     "<< (eea_caps[1]? "x":"-") <<"          "<< (eia_caps[1]? "x":"-") <<"    " << std::endl;
+    ss << "                 AES    :     "<< (eea_caps[2]? "x":"-") <<"          "<< (eia_caps[2]? "x":"-") <<"    " << std::endl;
+    ss << "                 ZUC    :     "<< (eea_caps[3]? "x":"-") <<"          "<< (eia_caps[3]? "x":"-") <<"    " << std::endl;
 
-    ss << "NAS Security Mode Command received? ";
+    ss << "Received Messages: " << std::endl;
     if (got_nas_security_mode_command) {
-      ss << "yes." << std::endl
-         << "NAS Security Mode Command: EEA Choice: " << srslte::ciphering_algorithm_id_text[nas_eea]
-         << ", EIA Choice: " << srslte::integrity_algorithm_id_text[nas_eia] << std::endl;
-    } else {
-      ss << "no." << std::endl;
+      ss << "  * NAS Security Mode Command: EEA=" << srslte::ciphering_algorithm_id_text[nas_eea] << ", EIA=" << srslte::integrity_algorithm_id_text[nas_eia] << std::endl;
     }
-
-    ss << "RRC Security Mode Command received? ";
     if (got_rrc_security_mode_command) {
-      ss << "yes." << std::endl
-         << "RRC Security Mode Command: EEA Choice: " << srslte::ciphering_algorithm_id_text[rrc_eea]
-         << ", EIA Choice: " << srslte::integrity_algorithm_id_text[rrc_eia] << std::endl;
-    } else {
-      ss << "no." << std::endl;
+      ss << "  * RRC Security Mode Command: EEA=" << srslte::ciphering_algorithm_id_text[rrc_eea] << ", EIA=" << srslte::integrity_algorithm_id_text[rrc_eia] << std::endl;
     }
-
-    ss << "Attach Accept received? ";
     if (got_attach_accept) {
-      ss << "yes" << std::endl;
-    } else {
-      ss << "no" << std::endl;
+      ss << "  * Attach Accept" << std::endl;
     }
-
-    ss << "Attach Reject received? ";
     if (got_attach_reject) {
-      if (has_secure_capabilities) {
-          ss << "yes, despite secure configuration available" << std::endl;
-      } else {
-          ss << "yes" << std::endl;
-      }
-    } else {
-      ss << "no" << std::endl;
+      ss << "  * Attach Reject" << std::endl;
     }
 
+    bool any = false;
     ss << "Potential issues: " << std::endl;
-    ss << "  * Insecure EEA ";
     if (summary.success && (summary.insecure_nas_eea_choice || summary.insecure_rrc_eea_choice)) {
-      ss << "detected! ISSUE!" << std::endl;
-    } else {
-      ss << "not detected." << std::endl;
+      ss << "  * Insecure ciphering EEA detected!" << std::endl;
+      any = true;
     }
-    ss << "  * Insecure EIA ";
     if (summary.success && (summary.insecure_nas_eia_choice || summary.insecure_rrc_eia_choice)) {
-      ss << "detected! ISSUE!" << std::endl;
-    } else {
-      ss << "not detected." << std::endl;
+      ss << "  * Insecure ciphering EIA detected!" << std::endl;
+      any = true;
     }
-    ss << "  * Spare Values ";
     if (summary.success && summary.spare_values) {
-      ss << "detected! ISSUE!" << std::endl;
-    } else {
-      ss << "not detected." << std::endl;
+      ss << "  * Insecure ciphering EIA detected!" << std::endl;
+      any = true;
+    }
+    if (!any) {
+      ss << " -- no issues -- " << std::endl;
     }
     // TODO reject despite secure config?
 
