@@ -1497,7 +1497,7 @@ void nas::parse_security_mode_command(uint32_t lcid, unique_byte_buffer_t pdu)
     nas_log->console("Security capabilities mismatch\n");
     nas_log->error("Security capabilities mismatch\n");
     // send_security_mode_reject(LIBLTE_MME_EMM_CAUSE_UE_SECURITY_CAPABILITIES_MISMATCH);
-    return;
+    //return;
   }
 
   // Generate NAS keys
