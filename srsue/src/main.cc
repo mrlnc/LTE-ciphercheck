@@ -757,7 +757,7 @@ int main(int argc, char* argv[])
       uint attempt = 0;
 
       if (fast_test) {
-        if (eia_mask & 0b0110 || eea_mask & 0b0110) {
+        if (eia_mask & 0b0110 && eea_mask & 0b0110) {
           // these tests have AES or Snow3G selected, so most likely, the network selects those
           continue;
         }
