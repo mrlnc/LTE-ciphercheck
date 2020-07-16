@@ -19,6 +19,8 @@ typedef struct summary_s {
   bool insecure_nas_eia_choice = false;
   bool insecure_rrc_eea_choice = false;
   bool insecure_rrc_eia_choice = false;
+  bool rrc_sec_cap_mismatch = false;
+  bool nas_sec_cap_mismatch = false;
   bool spare_values = false;
   // just any kind of reaction from the network?
   bool success = false;

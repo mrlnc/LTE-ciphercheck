@@ -336,6 +336,13 @@ void testbench::testcase::update_summary() {
     summary.spare_values = (nas_eia > 3 || nas_eea > 3 || rrc_eia > 3 || rrc_eea > 3); 
     summary.success =  (got_attach_accept || got_rrc_security_mode_command || got_nas_security_mode_command);
 
+    if (got_rrc_security_mode_command && !(eia_caps[rrc_eia] && eea_caps[rrc_eea])) {
+      summary.rrc_sec_cap_mismatch = true;
+    }
+    if (got_nas_security_mode_command && !(eia_caps[nas_eia] && eea_caps[nas_eea])) {
+      summary.nas_sec_cap_mismatch = true;
+    }
+
     summary.is_interesting = summary.insecure_nas_eea_choice || summary.insecure_nas_eia_choice || \
                               summary.insecure_rrc_eea_choice || summary.insecure_rrc_eia_choice || \
                               summary.spare_values;
@@ -349,6 +356,9 @@ std::string testbench::testcase::get_summary() {
     // if either AES or Snow3G are included we'd expect a secure, successful connection
     bool has_secure_capabilities = ( eia_caps[1] || eia_caps[2] )
                                 && ( eea_caps[1] || eea_caps[2] );
+
+    ss << "Testcase PCAPs -- MAC: " << mac_pcap << std::endl;
+    ss << "                  NAS: " << nas_pcap << std::endl;
 
     // TODO learn how to work with CLI…
     ss << "UE Security Capabilities: Encryption Integrity" << std::endl;
@@ -374,16 +384,40 @@ std::string testbench::testcase::get_summary() {
 
     bool any = false;
     ss << "Potential issues: " << std::endl;
-    if (summary.success && (summary.insecure_nas_eea_choice || summary.insecure_rrc_eea_choice)) {
-      ss << "  * Insecure ciphering EEA detected!" << std::endl;
+    if (summary.success && summary.insecure_nas_eea_choice ) {
+      ss << "  * Insecure ciphering algorithm on NAS: " << srslte::ciphering_algorithm_id_text[nas_eea] << std::endl;
       any = true;
     }
-    if (summary.success && (summary.insecure_nas_eia_choice || summary.insecure_rrc_eia_choice)) {
-      ss << "  * Insecure ciphering EIA detected!" << std::endl;
+    if (summary.success && summary.insecure_rrc_eea_choice ) {
+      ss << "  * Insecure ciphering algorithm on RRC: " << srslte::ciphering_algorithm_id_text[rrc_eea] << std::endl;
+      any = true;
+    }
+    if (summary.success && summary.insecure_nas_eia_choice ) {
+      ss << "  * Insecure integrity algorithm on NAS: " << srslte::ciphering_algorithm_id_text[nas_eea] << std::endl;
+      any = true;
+    }
+    if (summary.success && summary.insecure_rrc_eia_choice ) {
+      ss << "  * Insecure integrity algorithm on RRC: " << srslte::ciphering_algorithm_id_text[rrc_eia] << std::endl;
       any = true;
     }
     if (summary.success && summary.spare_values) {
-      ss << "  * Insecure ciphering EIA detected!" << std::endl;
+      ss << "  * Non-standard 'spare' values used for algorithm indication." << std::endl;
+      any = true;
+    }
+    if (summary.nas_sec_cap_mismatch) {
+      ss << "  * NAS-selected algorithms not in UE Security Capabilities. Network selected EEA=" << srslte::ciphering_algorithm_id_text[nas_eea] << ", EIA=" << srslte::integrity_algorithm_id_text[nas_eia] << std::endl;
+      any = true;
+    }
+    if (summary.rrc_sec_cap_mismatch) {
+      ss << "  * RRC-selected algorithms not in UE Security Capabilities. Network selected EEA=" << srslte::ciphering_algorithm_id_text[rrc_eea] << ", EIA=" << srslte::integrity_algorithm_id_text[rrc_eia] << std::endl;
+      any = true;
+    }
+    if (summary.success && rrc_eea != nas_eea) {
+      ss << "  * Ciphering algorithm mismatch between NAS (" << srslte::ciphering_algorithm_id_text[nas_eea] << ") and RRC (" << srslte::ciphering_algorithm_id_text[rrc_eea] << ")" << std::endl;
+      any = true;
+    }
+    if (summary.success && rrc_eia != nas_eia) {
+      ss << "  * Integrity algorithm mismatch between NAS (" << srslte::integrity_algorithm_id_text[nas_eia] << ") and RRC (" << srslte::integrity_algorithm_id_text[rrc_eia] << ")" << std::endl;
       any = true;
     }
     if (!any) {
