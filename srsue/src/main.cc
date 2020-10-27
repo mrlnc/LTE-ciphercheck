@@ -137,7 +137,7 @@ static int parse_args(all_args_t* args, int argc, char* argv[])
     ("pcap.nas_enable",   bpo::value<bool>(&args->stack.pcap.nas_enable)->default_value(false), "Enable NAS packet captures for wireshark")
 
     ("gui.enable", bpo::value<bool>(&args->gui.enable)->default_value(false), "Enable GUI plots")
-    ("fast-test", bpo::value<bool>(&fast_test)->default_value(false), "Fast tests; skip those with AES or Snow3G")
+    ("fast-test", bpo::value<bool>(&fast_test)->default_value(true), "Skip tests with AES or Snow3G (this is the default)")
     ("always-test-connection", bpo::value<bool>(&always_test_conn)->default_value(false), "Between test cases, connect with valid config.")
 
     ("log.rf_level", bpo::value<string>(&args->rf.log_level), "RF log level")
