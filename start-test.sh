@@ -60,12 +60,12 @@ for DIR in config pcap log; do
 done
 
 # fill in template config from parameters
-envsubst < ./srsue/ue.conf.example > ${TARGET_DIR}/config/ue.conf
+envsubst < ./srsue/ciphercheck.conf.example > ${TARGET_DIR}/config/ciphercheck.conf
 
 # we need access to USB; run privileged
 sudo docker run \
     --privileged \
-    -v ${TARGET_DIR}/config/ue.conf:/etc/srslte/ue.conf \
+    -v ${TARGET_DIR}/config/ciphercheck.conf:/etc/srslte/ciphercheck.conf \
     -v $(realpath ${TARGET_DIR}):/tmp/results \
     lte-ciphercheck
 
