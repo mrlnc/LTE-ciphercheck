@@ -1,3 +1,7 @@
+note: the tool is based on an old version of srsRAN (20.04). for best experience, I suggest using the most recent srsRAN version. it now includes the option to change the UE cipher support.
+
+---
+
 td;dr: we found that several European LTE networks allow unprotected connections (no encryption, no integrity protection). Attackers can intercept the authentication step from nearby users and get Internet access at the victim's cost. This tool quickly tests LTE networks for their cipher support. It's for use by telecom operators only.
 
 Operators should ensure that:
