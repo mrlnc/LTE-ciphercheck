@@ -1,4 +1,4 @@
-note: the tool is based on an old version of srsRAN (20.04). for best experience, I suggest using the most recent srsRAN version. it now includes the option to change the UE cipher support.
+❗️**note: the tool is based on an old version of srsRAN (20.04). for best experience, I suggest using the most recent srsRAN version. it now includes the option to change the UE cipher support.**❗️
 
 ---
 
